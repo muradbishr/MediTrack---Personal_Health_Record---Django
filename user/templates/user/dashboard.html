@@ -1,0 +1,773 @@
+{% load humanize %}
+
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - MediTrack</title>
+  <link rel="stylesheet" href="{% static 'user/css/main.css'%}">
+  <link rel="stylesheet" href="{% static 'user/css/dashboredoverlay.css'%}">
+  <link rel="stylesheet" href="{% static 'user/css/integration.css'%}">
+  <script src="{% static 'user/js/chart.js'%}"></script>
+
+</head>
+<body>
+  <div class="app-container">
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+            <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo" class="logo_img">
+          </div>
+          <span class="sidebar-logo-text">MediTrack</span>
+        </div>
+        <button class="btn-ghost" id="close-mobile-menu" style="display: none;">
+          <span id="close-icon"></span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="dashboard">
+              <span class="sidebar-nav-icon" id="nav-dashboard"></span>
+              <span class="sidebar-nav-text">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="health-data">
+              <span class="sidebar-nav-icon" id="nav-health"></span>
+              <span class="sidebar-nav-text">Health Data</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="files-reports">
+              <span class="sidebar-nav-icon" id="nav-files"></span>
+              <span class="sidebar-nav-text">Files & Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="alerts">
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+              <span class="sidebar-nav-text">Reminders</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="share-permissions">
+              <span class="sidebar-nav-icon" id="nav-share"></span>
+              <span class="sidebar-nav-text">Share & Permissions</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="profile">
+              <span class="sidebar-nav-icon" id="nav-profile"></span>
+              <span class="sidebar-nav-text">Profile</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-toggle">
+        <button class="sidebar-toggle-btn">
+          <span id="toggle-icon"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- TopBar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-menu-btn">
+            <span id="menu-icon"></span>
+          </button>
+          <div class="topbar-app-name">MediTrack</div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="topbar-notifications" onclick="window.location.href='/alerts'" >
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+            <span class="notification-badge">{{remainders}}</span>
+          </button>
+
+          <div class="user-menu">
+            <button class="user-menu-btn">
+
+                          {% if user.profile_picture %}
+  <img class="user-avatar" src="{{user.profile_picture.url}}" alt="User Avatar">
+{% else %}
+  <img class="avatar-circle" src="{% url 'user:initial-avatar' user.pk %}?size=64" alt="{{ user.get_full_name }}">
+{% endif %}
+              <div class="user-info">
+                    <div class="user-name" id="user-name"></div>
+                    <div class="user-email" id="user-email"></div>
+ 
+              </div>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" style="display: block;">
+                <a href="#" class="sidebar-nav-item" data-page="profile">
+
+                <div class="user-info">
+                   <div class="user-name" id="user-name"></div>
+                    <div class="user-email" id="user-email"></div>
+                </div>
+                </a>
+              </div>
+              <div class="dropdown-separator"></div>
+              <div class="dropdown-separator"></div>
+              <a href="{% url 'user:logout' %}" class="dropdown-item danger">Sign Out</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <div class="container">
+          <div class="space-y-6">
+            <!-- New User Welcome Banner -->
+            <div class="welcome-banner onboarding-prompt" id="new-user-welcome" style="display: none;">
+              <h3>Welcome to MediTrack!</h3>
+              <p>Thanks for completing the setup. Your personal medical record system is ready to use.</p>
+            </div>
+
+            <!-- Welcome Banner -->
+            <div class="card" style="background: linear-gradient(to right, #eff6ff, #e0e7ff); border-color: #dbeafe;">
+              <div class="card-content" style="padding: 2rem;">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h1 class="text-2xl font-semibold text-slate-900" style="margin-bottom: 0.5rem;">
+                      Hello,  <span class="user-name text-2xl" id="user-name"></span>
+                    </h1>
+                    <p class="text-slate-600">Welcome to your personal medical record dashboard.</p>
+                  </div>
+                  <div class="flex items-center justify-around sm:justify-center gap-6">
+                    <div style="text-align: center;">
+                      <div class="text-2xl font-semibold text-blue-600">{{remainders}}</div>
+                      <div class="text-sm text-slate-600">Upcoming Reminders</div>
+                    </div>
+                    <div style="text-align: center;">
+                      <div class="text-2xl font-semibold text-green-600">{{logscount}}</div>
+                      <div class="text-sm text-slate-600">Recent Activities</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Upload Section -->
+            <div class="card dashboard-card">
+              <div class="card-header">
+                <h3 class="card-title flex items-center">
+                  <span id="quick-upload-icon" class="text-blue-600" style="margin-right: 0.5rem;"></span>
+                  Quick Upload
+                </h3>
+              </div>
+              <div class="card-content">
+                <div class="upload-drop-zone quick-upload-section" id="dashboard-drop-zone">
+                  <span id="upload-icon-large" style="width: 2.5rem; height: 2.5rem; color: #94a3b8; margin: 0 auto 1rem;"></span>
+                  <p class="font-medium text-slate-900" style="margin-bottom: 0.5rem;">Drop files here or click to upload</p>
+                  <p class="text-sm text-slate-600" style="margin-bottom: 1rem;">Quickly upload medical documents, images, or reports</p>
+                  <button class="btn btn-primary" data-modal-trigger="upload-modal">
+                    <span id="upload-btn-icon"></span>
+                    Choose Files
+                  </button>
+                  <p class="text-xs text-slate-500" style="margin-top: 1rem;">Supported: PDF, JPG, PNG, DICOM, DOC • Max 50MB</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Vitals Trend Chart -->
+            <div class="card activity-chart">
+                <div class="card-header">
+                    <h3>Vitals Trend</h3>
+                    <div class="chart-controls">
+                        <button class="chart-btn active" data-period="7">7D</button>
+                        <button class="chart-btn" data-period="30">30D</button>
+                        <button class="chart-btn" data-period="90">90D</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Core Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Health Summary -->
+              <div class="card dashboard-card">
+                <div class="card-header">
+                  <h3 class="card-title flex items-center">
+                    <span id="activity-icon" class="text-blue-600" style="margin-right: 0.5rem;"></span>
+                    Health Summary
+                  </h3>
+                </div>
+                <div class="card-content space-y-4">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-600">Blood Pressure</span>
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium">{{blood_pressure.systolic}}/{{blood_pressure.diastolic}}</span>
+{% with bp=blood_pressure %}
+  {% if bp.category == "normal" %}
+    <span class="badge badge-normal">{{ bp.category }}</span>
+  {% elif bp.category == "elevated" %}
+    <span class="badge badge-elevated">{{ bp.category }}</span>
+  {% elif bp.category == "stage_1" %}
+    <span class="badge badge-stage_1">{{ bp.category }} </span>
+  {% elif bp.category == "stage_2" %}
+    <span class="badge badge-stage_2">{{ bp.category }} </span>
+  {% elif bp.category == "crisis" %}
+    <span class="badge badge-crisis">{{ bp.category }}</span>
+  {% else %}
+    <span class="badge badge-invalid">{{ bp.category }}</span>
+  {% endif %}
+{% endwith %}
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-600">Heart Rate</span>
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium">({{ heart_rate.hr }} bpm)</span>
+{% with hr=heart_rate %}
+  {% if hr.category == "invalid" %}
+    <span class="badge badge-hr-invalid">Invalid HR</span>
+  {% elif hr.category == "normal" %}
+    <span class="badge badge-hr-normal">{{ hr.label }} </span>
+  {% elif hr.category == "bradycardia" or hr.category == "severe_brady" %}
+    <span class="badge badge-hr-brady">{{ hr.label }} </span>
+  {% elif hr.category == "tachycardia" %}
+    <span class="badge badge-hr-tachy">{{ hr.label }}</span>
+  {% elif hr.category == "severe_tachy" %}
+    <span class="badge badge-hr-severe">{{ hr.label }}</span>
+  {% else %}
+    <span class="badge badge-hr-invalid">{{ hr.label }}</span>
+  {% endif %}
+{% endwith %}
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-600">BMI</span>
+                      <div class="flex items-center gap-2">
+
+                      <span class="text-sm font-medium">{{ bim.bmi }}</span>
+                      {% with bmi=bim %}
+  {% if bmi.category == "invalid" %}
+    <span class="badge badge-bmi-invalid">Invalid</span>
+  {% elif bmi.category == "underweight" %}
+    <span class="badge badge-bmi-underweight">{{ bmi.label }} </span>
+  {% elif bmi.category == "normal" %}
+    <span class="badge badge-bmi-normal">{{ bmi.label }} </span>
+  {% elif bmi.category == "overweight" %}
+    <span class="badge badge-bmi-overweight">{{ bmi.label }} </span>
+  {% elif bmi.category == "obesity" %}
+    <span class="badge badge-bmi-obesity">{{ bmi.label }} </span>
+  {% endif %}
+{% endwith %}
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-600">Blood Sugar</span>
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium">({{ blood_sugar.value }} mg/dL)</span>
+{% with gs=blood_sugar %}
+  {% if gs.category == "invalid" %}
+    <span class="badge badge-bad">Invalid</span>
+  {% elif gs.category == "low" %}
+    <span class="badge badge-low">{{ gs.label }} </span>
+  {% elif gs.category == "normal" %}
+    <span class="badge badge-normal">{{ gs.label }} </span>
+  {% elif gs.category == "prediabetes" %}
+    <span class="badge badge-warning">{{ gs.label }} </span>
+  {% elif gs.category == "diabetes" %}
+    <span class="badge badge-danger">{{ gs.label }}</span>
+  {% endif %}
+{% endwith %}
+                      </div>
+                    </div>
+                  </div>
+                  <button class="btn btn-secondary w-full">Add Detailed Trends</button>
+                </div>
+              </div>
+
+              <!-- Latest Files & Reports -->
+              <div class="card dashboard-card">
+                <div class="card-header">
+                  <h3 class="card-title flex items-center">
+                    <span id="files-icon" class="text-blue-600" style="margin-right: 0.5rem;"></span>
+                    Latest Files & Reports
+                  </h3>
+                </div>
+                <div class="card-content">
+                  <div class="space-y-3" id="recent-files-list">
+                    {% for file in files %}
+                    
+                    <div class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100" style="cursor: pointer; transition: background-color 0.2s;">
+                      <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-900 truncate">{{file.file_name}}</p>
+                        <p class="text-xs text-slate-500">{{file.file_type}} • {{file.upload_date}}</p>
+                      </div>
+                    </div>
+                      {%endfor%}
+                  </div>
+                  <button class="btn btn-secondary w-full" style="margin-top: 1rem;" onclick="window.location.href='/files-reports'">View All Files</button>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="card dashboard-card">
+                <div class="card-header">
+                  <h3 class="card-title flex items-center">
+                    <span id="plus-icon" class="text-blue-600" style="margin-right: 0.5rem;"></span>
+                    Quick Actions
+                  </h3>
+                </div>
+                <div class="card-content space-y-3">
+                  <button class="btn btn-primary w-full" style="justify-content: flex-start; height: 3rem;" onclick="window.location.href='/health-data'">
+                    <span id="heart-icon" style="margin-right: 0.75rem;"></span>
+                    Add Health Data
+                  </button>
+                  <button class="btn btn-secondary w-full" style="justify-content: flex-start; height: 3rem;" data-modal-trigger="upload-modal">
+                    <span id="upload-icon" style="margin-right: 0.75rem;"></span>
+                    Upload File
+                  </button>
+                  <button class="btn btn-secondary w-full" style="justify-content: flex-start; height: 3rem;" onclick="window.location.href='/alerts'">
+                    <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+                    Create Alert
+                  </button>
+                  
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Progress (hidden by default) -->
+            <div id="upload-progress-dashboard" class="card dashboard-card" style="display: none;">
+              <div class="card-header">
+                <h3 class="card-title flex items-center">
+                  <span id="upload-progress-icon" class="text-blue-600 upload-progress-animation" style="margin-right: 0.5rem;"></span>
+                  Upload Progress
+                </h3>
+              </div>
+              <div class="card-content">
+                <div id="upload-progress-list" class="space-y-3">
+                  <!-- Upload progress items will be inserted here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activity -->
+<div class="card dashboard-card">
+  <div class="card-header"><h3 class="card-title">Recent Activity</h3></div>
+  <div class="card-content">
+    <div class="space-y-4" id="recent-activity-list">
+
+      {% for log in activities %}
+      <div class="flex items-center gap-3" style="padding: 0.5rem 0;">
+        <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+          
+          <!-- All icons use the SAME class — no repeated IDs -->
+          <span class="activity-icon text-slate-600" data-icon="{{ log.icon|default:'info' }}"></span>
+
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-slate-900">
+            {{ log.action|capfirst }} {{ log.model_name|default:"item" }}
+          </p>
+          <p class="text-xs text-slate-500">
+            {{ log.created_at|naturaltime }}
+          </p>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-sm text-slate-400">No activity yet.</p>
+      {% endfor %}
+
+    </div>
+  </div>
+</div>
+
+
+
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" data-modal-trigger="upload-modal" title="Quick Upload">
+      <span id="fab-upload-icon"></span>
+    </button>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="modal-overlay" id="upload-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Medical File</h3>
+        <button class="modal-close-btn" data-modal-close>
+          <span id="modal-close-icon"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-drop-zone" id="upload-drop-zone">
+          <span id="upload-icon-modal" style="width: 3rem; height: 3rem; color: #94a3b8; margin: 0 auto 1rem;"></span>
+          <p class="text-lg font-medium text-slate-900" style="margin-bottom: 0.5rem;">Drag and drop your files here</p>
+          <p class="text-sm text-slate-600" style="margin-bottom: 1rem;">or click to browse files</p>
+          <button class="btn btn-primary" id="choose-files-btn">Choose Files</button>
+          <p class="text-xs text-slate-500" style="margin-top: 1rem;">Supported formats: PDF, DICOM, JPG, PNG, DOC, DOCX (Max 50MB)</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" id="upload-files-btn">Upload Files</button>
+      </div>
+    </div>
+  </div>
+  <!-- Detailed Trends Modal -->
+<!-- Detailed Trends Modal -->
+<div class="modal-overlay" id="trends-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Detailed Health Trends</h3>
+      <button class="modal-close-btn" data-modal-close>&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="trends-form" method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="id_blood_pressure">Blood Pressure</label>
+          {{ form.blood_pressure }}
+        </div>
+        <div class="form-group">
+          <label for="id_heart_rate">Heart Rate</label>
+          {{ form.heart_rate }}
+        </div>
+        <div class="form-group">
+          <label for="id_weight">BIM (kg/cm)</label>
+          {{ form.weight }}
+        </div>
+        <div class="form-group">
+          <label for="id_blood_sugar">Blood Sugar (mg/dL)</label>
+          {{ form.blood_sugar }}
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Save Trends</button>
+      </form>
+      <div id="trends-result" style="margin-top:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('trends-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // Convert FormData to object properly
+    const data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+    });
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    try {
+        const response = await fetch("{% url 'user:save_trends' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        const resultDiv = document.getElementById('trends-result');
+        
+        if(result.status === 'success'){
+            resultDiv.innerHTML = `<p style="color:green">${result.message}</p>`;
+            form.reset();
+            // Close modal after success
+            setTimeout(() => {
+                document.getElementById('trends-modal').classList.remove('active');
+            }, 2000);
+        } else {
+            let errorMessage = result.message;
+            if(result.errors){
+                errorMessage = Object.entries(result.errors).map(([field, msgs]) => 
+                    `${field}: ${msgs.join(', ')}`
+                ).join('<br>');
+            }
+            resultDiv.innerHTML = `<p style="color:red">${errorMessage}</p>`;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('trends-result').innerHTML = 
+            `<p style="color:red">Network error: ${error.message}</p>`;
+    }
+});
+</script>
+
+
+ <script src="{%static 'user/js/icons.js'%}"></script>
+  <script src="{%static 'user/js/app.js'%}"></script>
+  <script src="{%static 'user/js/dashboard.js'%}"></script>
+  <script src="{%static 'user/js/dashbord2.js'%}"></script>
+    <script src="{%static 'user/js/chart.js'%}"></script>
+
+  <!-- <script src="{%static 'user/js/files-reports.js'%}"></script> -->
+
+  <script>
+    // Dashboard specific file upload manager
+    window.DashboardUploader = {
+      init() {
+        this.setupDashboardDropZone();
+        this.setupRecentFilesUpdate();
+        this.setupProgressDisplay();
+      },
+
+      setupDashboardDropZone() {
+        const dashboardDropZone = document.getElementById('dashboard-drop-zone');
+        if (!dashboardDropZone) return;
+
+        // Make dashboard drop zone functional
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+          dashboardDropZone.addEventListener(eventName, FilesManager.preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+          dashboardDropZone.addEventListener(eventName, () => {
+            dashboardDropZone.style.borderColor = '#3b82f6';
+            dashboardDropZone.style.backgroundColor = '#eff6ff';
+          }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          dashboardDropZone.addEventListener(eventName, () => {
+            dashboardDropZone.style.borderColor = '#cbd5e1';
+            dashboardDropZone.style.backgroundColor = 'transparent';
+          }, false);
+        });
+
+        dashboardDropZone.addEventListener('drop', (e) => {
+          const files = Array.from(e.dataTransfer.files);
+          FilesManager.handleFiles(files);
+          // Open the upload modal to show progress
+          document.getElementById('upload-modal').classList.add('active');
+        }, false);
+
+        dashboardDropZone.addEventListener('click', () => {
+          document.getElementById('upload-modal').classList.add('active');
+        });
+      },
+
+      setupRecentFilesUpdate() {
+        // Override the original FilesManager to update recent files on dashboard
+        const originalUploadFiles = FilesManager.uploadFiles;
+        FilesManager.uploadFiles = async function() {
+          await originalUploadFiles.call(this);
+          DashboardUploader.updateRecentFiles();
+          DashboardUploader.addToRecentActivity();
+        };
+      },
+
+      setupProgressDisplay() {
+        const originalUpdateModal = FilesManager.updateUploadModal;
+        FilesManager.updateUploadModal = function() {
+          originalUpdateModal.call(this);
+          DashboardUploader.showUploadProgress();
+        };
+      },
+
+      showUploadProgress() {
+        const progressCard = document.getElementById('upload-progress-dashboard');
+        const progressList = document.getElementById('upload-progress-list');
+        
+        if (FilesManager.uploadQueue.length > 0) {
+          progressCard.style.display = 'block';
+          progressList.innerHTML = FilesManager.uploadQueue.map(file => 
+            this.createProgressItemHTML(file)
+          ).join('');
+        } else {
+          progressCard.style.display = 'none';
+        }
+      },
+
+      createProgressItemHTML(file) {
+        const statusIcon = file.status === 'completed' ? '✓' : 
+                          file.status === 'error' ? '✗' : 
+                          file.status === 'uploading' ? '⟳' : '';
+        
+        return `
+          <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="text-blue-600 text-sm">${statusIcon}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900 truncate">${file.name}</p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>${file.size}</span>
+                <span>•</span>
+                <span>${file.category}</span>
+              </div>
+              ${file.status === 'uploading' ? `
+                <div class="w-full bg-slate-200 rounded-full h-1 mt-1">
+                  <div class="bg-blue-600 h-1 rounded-full transition-all duration-300" style="width: ${file.progress}%"></div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      },
+
+      updateRecentFiles() {
+        const recentFilesList = document.getElementById('recent-files-list');
+        const recentFiles = FilesManager.files.slice(-3).reverse(); // Get last 3 files
+        
+        recentFilesList.innerHTML = recentFiles.map(file => `
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100" style="cursor: pointer; transition: background-color 0.2s;">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="text-blue-600 recent-file-icon" data-type="${file.type}"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900 truncate">${file.name}</p>
+              <p class="text-xs text-slate-500">${file.category} • ${file.date}</p>
+            </div>
+          </div>
+        `).join('');
+
+        // Set up icons for recent files
+        setTimeout(() => {
+          const recentFileIcons = document.querySelectorAll('.recent-file-icon');
+          recentFileIcons.forEach(icon => {
+            const type = icon.getAttribute('data-type');
+            const iconType = type === 'image' ? 'image' : 'fileText';
+            setIcon(icon, iconType);
+          });
+        }, 0);
+      },
+
+      addToRecentActivity() {
+        const activityList = document.getElementById('recent-activity-list');
+        const newActivity = `
+          <div class="flex items-center gap-3" style="padding: 0.5rem 0;">
+            <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+              <span class="text-slate-600 upload-activity-icon"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900">New files uploaded</p>
+              <p class="text-xs text-slate-500">Just now</p>
+            </div>
+          </div>
+        `;
+        
+        activityList.insertAdjacentHTML('afterbegin', newActivity);
+        
+        // Set up icon for new activity
+        setTimeout(() => {
+          const uploadIcon = document.querySelector('.upload-activity-icon');
+          if (uploadIcon) setIcon(uploadIcon, 'upload');
+        }, 0);
+      }
+    };
+
+    // Initialize dashboard-specific icons and functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Sidebar icons
+      setIcon(document.getElementById('logo-icon'), 'heart');
+      setIcon(document.getElementById('nav-dashboard'), 'dashboard');
+      setIcon(document.getElementById('nav-health'), 'heart');
+      setIcon(document.getElementById('nav-files'), 'fileText');
+      setIcon(document.getElementById('nav-alerts'), 'bell');
+      setIcon(document.getElementById('nav-share'), 'share2');
+      setIcon(document.getElementById('nav-profile'), 'user');
+      setIcon(document.getElementById('toggle-icon'), 'chevronLeft');
+      
+      // TopBar icons
+      setIcon(document.getElementById('menu-icon'), 'menu');
+      setIcon(document.getElementById('bell-icon'), 'bell');
+      setIcon(document.getElementById('settings-icon'), 'settings');
+      
+      // Dashboard content icons
+      setIcon(document.getElementById('activity-icon'), 'activity');
+      setIcon(document.getElementById('trending-icon'), 'trendingUp');
+      setIcon(document.getElementById('files-icon'), 'fileText');
+      setIcon(document.getElementById('plus-icon'), 'plus');
+      setIcon(document.getElementById('quick-upload-icon'), 'upload');
+      setIcon(document.getElementById('upload-progress-icon'), 'loader');
+      setIcon(document.getElementById('chart-icon'), 'trendingUp');
+      setIcon(document.getElementById('download-chart-icon'), 'download');
+      setIcon(document.getElementById('chart-placeholder-icon'), 'barChart', 'icon-lg');
+      
+      // Upload icons
+      setIcon(document.getElementById('upload-icon-large'), 'upload', 'icon-lg');
+      setIcon(document.getElementById('upload-btn-icon'), 'upload');
+      setIcon(document.getElementById('upload-icon-modal'), 'upload', 'icon-lg');
+      setIcon(document.getElementById('modal-close-icon'), 'x');
+      setIcon(document.getElementById('fab-upload-icon'), 'upload');
+      
+      // File icons
+      setIcon(document.getElementById('file-icon-1'), 'fileText');
+      setIcon(document.getElementById('file-icon-2'), 'fileText');
+      setIcon(document.getElementById('file-icon-3'), 'fileText');
+      
+      // Quick action icons
+      setIcon(document.getElementById('heart-icon'), 'heart');
+      setIcon(document.getElementById('upload-icon'), 'upload');
+      setIcon(document.getElementById('bell-icon-2'), 'bell');
+      setIcon(document.getElementById('calendar-icon'), 'calendar');
+      
+      // Activity icons
+      setIcon(document.getElementById('upload-icon-2'), 'upload');
+      setIcon(document.getElementById('share-icon-2'), 'share2');
+      setIcon(document.getElementById('heart-icon-2'), 'heart');
+      setIcon(document.getElementById('bell-icon-3'), 'bell');
+
+      // Initialize file upload functionality
+      if (window.FilesManager) {
+        window.FilesManager.init();
+      }
+      
+      // Initialize dashboard uploader
+      if (window.DashboardUploader) {
+        window.DashboardUploader.init();
+      }
+    });
+  </script>
+  <script>
+const user = JSON.parse(localStorage.getItem('meditrack-user'));
+if (user) {
+  // Update all elements with class .user-name
+  document.querySelectorAll('.user-name').forEach(el => {
+    el.textContent = `${user.first_name} ${user.last_name}`;
+  });
+
+  // Update all elements with class .user-email
+  document.querySelectorAll('.user-email').forEach(el => {
+    el.textContent = user.email;
+  });
+}
+// Initialize all activity icons
+document.querySelectorAll('.activity-icon').forEach(el => {
+  const iconType = el.dataset.icon; // "upload", "pill", "heart", etc.
+  setIcon(el, iconType || 'info');
+});
+
+
+</script>
+<script src="{% static 'user/js/files-reports.js' %}"></script>
+
+</body>
+</html>

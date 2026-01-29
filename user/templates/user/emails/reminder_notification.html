@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; }
+        .reminder-card { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0; }
+        .reminder-type { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .type-medication { background: #dcfce7; color: #16a34a; }
+        .type-monitoring { background: #dbeafe; color: #2563eb; }
+        .type-appointment { background: #f3e8ff; color: #7c3aed; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕒 MediTrack Reminder</h1>
+            <p>Time for your health task</p>
+        </div>
+        
+        <div class="content">
+            <div class="reminder-card">
+                <h2 style="margin-top: 0; color: #1e293b;">{{ reminder.title }}</h2>
+                
+                <div style="margin-bottom: 15px;">
+                    <span class="reminder-type type-{{ reminder.type }}">{{ type_display }}</span>
+                </div>
+                
+                <div style="color: #475569; margin-bottom: 10px;">
+                    <strong>🕐 Time:</strong> {{ time_display }}
+                </div>
+                
+                <div style="color: #475569; margin-bottom: 10px;">
+                    <strong>📅 Frequency:</strong> {{ frequency_display }}
+                </div>
+                
+                {% if reminder.frequency == 'once' and reminder.date %}
+                <div style="color: #475569; margin-bottom: 10px;">
+                    <strong>📌 Date:</strong> {{ reminder.date|date:"F j, Y" }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <p style="color: #64748b; font-size: 14px;">
+                This reminder was set up in your MediTrack account. Please take appropriate action for your health.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>© {% now "Y" %} MediTrack. All rights reserved.</p>
+            <p><a href="{{ site_url }}" style="color: #667eea; text-decoration: none;">Visit MediTrack</a></p>
+        </div>
+    </div>
+</body>
+</html>

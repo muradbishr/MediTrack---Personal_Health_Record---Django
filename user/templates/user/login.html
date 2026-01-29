@@ -1,0 +1,142 @@
+{% extends "user/base.html" %}
+{% load static %}
+
+{% block content %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome - MediTrack</title>
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="{% static 'user/css/auth.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="auth-container">
+    <!-- Background Elements -->
+    <div class="auth-background">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="auth-content">
+      <!-- Form Container -->
+      <div class="form-container login-container">
+        <!-- Logo -->
+         <div class="logo">
+          <div >
+                        <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo" class="logo_img" style="max-width: 150px;  
+  height: auto;     
+  display: block;
+  margin: 0 auto;">
+
+          </div>
+        </div>
+
+        <div class="form-header">
+          <h1 class="form-title">Welcome Back</h1>
+          <p class="form-subtitle">Log in to access your medical records</p>
+        </div>
+
+        <form class="auth-form" id="login-form">
+          <!-- Email -->
+          <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-input"
+              placeholder="your@email.com"
+              required
+            >
+            <span class="form-error" id="email-error"></span>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+              <label for="password" class="form-label">Password</label>
+            
+            <div class="password-input">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="form-input"
+                placeholder="••••••••"
+                required
+              >
+              <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="eye-icon">
+                  <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+              </button>
+            </div>
+              <a href="#" class="forgot-password" >Forgot password?</a>
+
+            <span class="form-error" id="password-error"></span>
+          </div>
+
+          <!-- Remember Me -->
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="rememberMe" name="remember">
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">Remember me</span>
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button  type="submit" onclick="console.log('button clicked')" class=" btn btn-primary btn-full">
+            Log In
+          </button>
+        </form>
+
+        <!-- Sign Up Link -->
+        <div class="auth-footer">
+          <p class="footer-text">
+            Don't have an account? 
+            <a href="{% url 'user:signup'%}" class="link">Sign up</a>
+          </p>
+        </div>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span class="divider-text">Or continue with</span>
+        </div>
+
+        <!-- Social Login -->
+        <div class="social-login">
+          <button class="btn btn-social" >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.255H17.92C17.665 15.63 16.89 16.795 15.725 17.575V20.335H19.28C21.36 18.42 22.56 15.6 22.56 12.25Z" fill="#4285F4"/>
+              <path d="M12 23C15.24 23 17.955 21.935 19.28 20.335L15.725 17.575C14.735 18.235 13.465 18.625 12 18.625C8.87501 18.625 6.22501 16.69 5.36501 13.89H1.67501V16.76C2.98501 19.355 7.24001 23 12 23Z" fill="#34A853"/>
+              <path d="M5.36499 13.89C5.14499 13.23 5.01999 12.53 5.01999 11.82C5.01999 11.11 5.13999 10.41 5.36499 9.75V6.88H1.67499C0.969994 8.29 0.569994 9.89 0.569994 11.82C0.569994 13.75 0.969994 15.35 1.67499 16.76L5.36499 13.89Z" fill="#FBBC05"/>
+              <path d="M12 4.375C13.615 4.375 15.065 4.93 16.205 6.02L19.36 2.865C17.95 1.54 15.235 0.625 12 0.625C7.24001 0.625 2.98501 4.27 1.67501 6.88L5.36501 9.75C6.22501 6.95 8.87501 4.375 12 4.375Z" fill="#EA4335"/>
+            </svg>
+            Google
+          </button>
+          <button class="btn btn-social" >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.05 20.28C16.03 21.23 14.96 21.14 13.94 20.65C12.84 20.15 11.83 20.13 10.68 20.65C9.26 21.32 8.47 21.2 7.57 20.28C2.85 15.25 3.72 7.59 9.12 7.31C10.55 7.39 11.54 8.16 12.38 8.22C13.63 7.93 14.83 7.14 16.18 7.22C17.9 7.34 19.22 8.04 20.09 9.32C16.27 11.73 17.06 16.67 20.62 18.13C19.98 19.62 19.05 21.08 17.05 20.28ZM12.03 7.25C11.88 5.02 13.69 3.18 15.77 3C16.08 5.58 13.43 7.5 12.03 7.25Z" fill="currentColor"/>
+            </svg>
+            Apple
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+  const dashboardUrl = "{% url 'user:dashboard' %}";
+</script>
+  <script src="{% static 'user/js/login.js'%}"></script>
+</body>
+</html>
+{% endblock  %}

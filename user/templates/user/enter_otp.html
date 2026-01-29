@@ -1,0 +1,242 @@
+{% extends "user/base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --success: #16a34a;
+    --error: #dc2626;
+    --gray-900: #111827;
+    --gray-600: #4b5563;
+    --gray-300: #d1d5db;
+    --bg: #f9fafb;
+  }
+
+  body {
+    background: var(--bg);
+  }
+
+  .otp-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .otp-card {
+    background: #fff;
+    width: 100%;
+    max-width: 420px;
+    padding: 36px 32px;
+    border-radius: 16px;
+    box-shadow:
+      0 10px 25px rgba(0, 0, 0, 0.08),
+      0 4px 10px rgba(0, 0, 0, 0.04);
+    text-align: center;
+  }
+
+  .otp-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .otp-card h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+  }
+
+  .otp-card p {
+    font-size: 14px;
+    color: var(--gray-600);
+    margin-bottom: 20px;
+  }
+
+  .otp-email {
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .otp-input {
+    width: 100%;
+    padding: 14px;
+    font-size: 20px;
+    letter-spacing: 6px;
+    text-align: center;
+    border-radius: 12px;
+    border: 1px solid var(--gray-300);
+    outline: none;
+    margin-bottom: 16px;
+    transition: border 0.2s, box-shadow 0.2s;
+  }
+
+  .otp-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  }
+
+  .otp-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .otp-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s, transform 0.05s;
+  }
+
+  .otp-btn:active {
+    transform: scale(0.98);
+  }
+
+  .otp-btn.primary {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .otp-btn.primary:hover {
+    background: var(--primary-dark);
+  }
+
+  .otp-btn.secondary {
+    background: #f3f4f6;
+    color: var(--gray-900);
+  }
+
+  .otp-btn.secondary:hover {
+    background: #e5e7eb;
+  }
+
+  .otp-message {
+    margin-top: 16px;
+    font-size: 14px;
+    min-height: 18px;
+  }
+
+  .otp-message.success {
+    color: var(--success);
+  }
+
+  .otp-message.error {
+    color: var(--error);
+  }
+
+  .otp-message.info {
+    color: var(--gray-600);
+  }
+</style>
+
+<div class="otp-wrapper">
+  <div class="otp-card">
+    <div class="otp-icon">✉️</div>
+
+    <h1>Verify your email</h1>
+    <p>
+      We sent a 6-digit code to
+      <span class="otp-email" id="masked-email">{{ masked_email }}</span>
+    </p>
+
+    <input
+      id="otp-code"
+      class="otp-input"
+      type="text"
+      maxlength="6"
+      inputmode="numeric"
+      pattern="\d{6}"
+      placeholder="••••••"
+      autocomplete="one-time-code"
+    />
+
+    <div class="otp-actions">
+      <button id="verify-btn" class="otp-btn primary">
+        Verify
+      </button>
+      <button id="resend-btn" class="otp-btn secondary">
+        Resend
+      </button>
+    </div>
+
+    <p id="otp-message" class="otp-message" role="status"></p>
+  </div>
+</div>
+
+<script>
+  const rawEmail = "{{ email|escapejs }}";
+
+  document.getElementById('resend-btn').addEventListener('click', async () => {
+    try {
+      const resp = await fetch('/user/send-email-otp/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ email: rawEmail })
+      });
+      const json = await resp.json();
+      showMsg(json.message, json.success ? 'success' : 'error');
+    } catch {
+      showMsg('Failed to resend code', 'error');
+    }
+  });
+
+  document.getElementById('verify-btn').addEventListener('click', async () => {
+    const code = document.getElementById('otp-code').value.trim();
+    if (!/^\d{6}$/.test(code)) {
+      return showMsg('Enter the 6-digit code', 'error');
+    }
+    try {
+      const resp = await fetch('/user/verify-email-otp/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ email: rawEmail, code })
+      });
+      const json = await resp.json();
+      if (json.success) {
+        showMsg('Verified! Redirecting…', 'success');
+        setTimeout(() => {
+          window.location.href = json.redirect || '/login/';
+        }, 800);
+      } else {
+        showMsg(json.message || 'Verification failed', 'error');
+      }
+    } catch {
+      showMsg('Verification request failed', 'error');
+    }
+  });
+
+  function showMsg(msg, kind = 'info') {
+    const el = document.getElementById('otp-message');
+    el.textContent = msg;
+    el.className = 'otp-message ' + kind;
+  }
+
+  function getCookie(name) {
+    const cookie = document.cookie.split('; ')
+      .find(row => row.startsWith(name + '='));
+    return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
+  }
+</script>
+{% endblock %}

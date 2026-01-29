@@ -1,0 +1,3412 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static admin_list admin_urls %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'user/fonts/inter/inter.css' %}">
+<link rel="stylesheet" href="{% static 'user/fonts/poppins/poppins.css' %}">
+<link rel="stylesheet" href="{% static 'user/css/fontawesome/css/all.min.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'user/js/chart.js'%}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="activity-log-dashboard" id="activityLogApp">
+    <!-- Header Section -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <h2 class="margen-auto">
+                <i class="fas fa-stream"></i>
+                Activity Log Dashboard
+                <span class="subtitle">Monitor and analyze system activities in real-time</span>
+            </h2>
+            <div class="header-actions hidden">
+                <button class="btn-refresh" id="refreshStats" title="Refresh Dashboard">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <a href="{{ export_url }}" class="btn-export" id="exportCsv">
+                    <i class="fas fa-file-export"></i> Export CSV
+                </a>
+                <button class="btn-settings" id="settingsToggle">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="stats-container">
+            <div class="stat-card stat-total">
+                <div class="stat-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value">{{ stats.total_all|default:"0" }}</span>
+                    <span class="stat-label">Total Activities</span>
+                </div>
+                <div class="stat-trend up">
+                    <i class="fas fa-arrow-up"></i> 12%
+                </div>
+            </div>
+            
+            <div class="stat-card stat-24h">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value">{{ stats.total_24h|default:"0" }}</span>
+                    <span class="stat-label">Last 24 Hours</span>
+                </div>
+                <div class="stat-trend up">
+                    <i class="fas fa-arrow-up"></i> 8%
+                </div>
+            </div>
+            
+            <div class="stat-card stat-7d">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value">{{ stats.total_7d|default:"0" }}</span>
+                    <span class="stat-label">Last 7 Days</span>
+                </div>
+                <div class="stat-trend down">
+                    <i class="fas fa-arrow-down"></i> 3%
+                </div>
+            </div>
+            
+            <div class="stat-card stat-users">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value">{{ stats.top_users|length|default:"0" }}</span>
+                    <span class="stat-label">Active Users</span>
+                </div>
+                <div class="stat-trend up">
+                    <i class="fas fa-arrow-up"></i> 5%
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Filters Panel -->
+        <div class="filters-panel">
+            <div class="filters-header">
+                <h3><i class="fas fa-filter"></i> Filters & Search</h3>
+                <button class="btn-clear-filters" id="clearFilters">
+                    <i class="fas fa-times"></i> Clear All
+                </button>
+            </div>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="searchInput">
+                        <i class="fas fa-search"></i> Search Activity
+                    </label>
+                    <div class="search-wrapper">
+                        <input type="text" 
+                               id="searchInput" 
+                               class="filter-input"
+                               placeholder="Search by action, details, or user..."
+                               aria-label="Search activities">
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="actionFilter">
+                        <i class="fas fa-bolt"></i> Action Type
+                    </label>
+                    <select id="actionFilter" class="filter-select" multiple aria-label="Filter by action type">
+                        <option value="create">Create</option>
+                        <option value="update">Update</option>
+ 
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="modelFilter">
+                        <i class="fas fa-cube"></i> Model
+                    </label>
+                    <select id="modelFilter" class="filter-select" multiple aria-label="Filter by model">
+                        {% if stats.top_models %}
+                            {% for model in stats.top_models %}
+                                <option value="{{ model.model_name }}">{{ model.model_name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="userFilter">
+                        <i class="fas fa-user"></i> User
+                    </label>
+                    <select id="userFilter" class="filter-select" aria-label="Filter by user">
+                        <option value="">All Users</option>
+                        {% if stats.top_users %}
+                            {% for user in stats.top_users %}
+                                <option value="{{ user.user__email }}">{{ user.user__email }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div class="filter-group date-range-group">
+                    <label for="dateRange">
+                        <i class="fas fa-calendar-alt"></i> Date Range
+                    </label>
+                    <div class="date-range-inputs">
+                        <input type="date" 
+                               id="startDate" 
+                               class="filter-input date-input"
+                               aria-label="Start date">
+                        <span class="date-range-separator">to</span>
+                        <input type="date" 
+                               id="endDate" 
+                               class="filter-input date-input"
+                               aria-label="End date">
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="quick-filters">
+                <button class="quick-filter-btn active" data-filter="24h">
+                    <i class="fas fa-clock"></i> Last 24h
+                </button>
+                <button class="quick-filter-btn" data-filter="7d">
+                    <i class="fas fa-calendar-week"></i> Last 7d
+                </button>
+                <button class="quick-filter-btn" data-filter="30d">
+                    <i class="fas fa-calendar-alt"></i> Last 30d
+                </button>
+                <button class="quick-filter-btn" data-filter="today">
+                    <i class="fas fa-sun"></i> Today
+                </button>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4><i class="fas fa-chart-line"></i> Activity Timeline</h4>
+                    <select class="chart-period-select">
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                    </select>
+                </div>
+                <canvas id="activityTimelineChart"></canvas>
+            </div>
+            
+
+        </div>
+
+        <!-- Activity Log Cards -->
+        <div class="activity-section">
+            <div class="section-header">
+                <h3><i class="fas fa-list-alt"></i> Recent Activities</h3>
+                <div class="view-controls">
+                    <div class="view-toggle">
+                        <button class="view-btn fas fa-th-large active" data-view="card" title="Card View">
+                        </button>
+                        <button class="view-btn fas fa-table" data-view="table" title="Table View">
+                        </button>
+                        <button class="view-btn fas fa-list" data-view="compact" title="Compact View">
+                        </button>
+                    </div>
+                    <div class="results-count">
+                        Showing <span id="resultsCount">0</span> of {{ stats.total_all|default:"0" }} activities
+                    </div>
+                    <div class="sort-controls">
+                        <select id="sortBy" class="sort-select">
+                            <option value="created_at_desc">Newest First</option>
+                            <option value="created_at_asc">Oldest First</option>
+                            <option value="action">Action A-Z</option>
+                            <option value="user">User A-Z</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card View -->
+            <div class="activities-container card-view" id="cardViewContainer">
+                <!-- Activity cards will be rendered here by JavaScript -->
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading activities...</p>
+                </div>
+            </div>
+            
+            <!-- Table View -->
+            <div class="activities-container table-view" id="tableViewContainer" style="display: none;">
+                <div class="table-wrapper">
+                    <table class="activity-table" aria-label="Activity Log Table">
+                        <thead>
+                            <tr>
+                                <th class="table-col-time">
+                                    <button class="table-sort-btn" data-sort="time">
+                                        Time <i class="fas fa-sort"></i>
+                                    </button>
+                                </th>
+                                <th class="table-col-user">
+                                    <button class="table-sort-btn" data-sort="user">
+                                        User <i class="fas fa-sort"></i>
+                                    </button>
+                                </th>
+                                <th class="table-col-action">
+                                    <button class="table-sort-btn" data-sort="action">
+                                        Action <i class="fas fa-sort"></i>
+                                    </button>
+                                </th>
+                                <th class="table-col-model">
+                                    <button class="table-sort-btn" data-sort="model">
+                                        Model <i class="fas fa-sort"></i>
+                                    </button>
+                                </th>
+                                <th class="table-col-object">Object ID</th>
+                                <th class="table-col-ip">IP Address</th>
+                                <th class="table-col-details">Details</th>
+                                <th class="table-col-actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Table rows will be rendered here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Compact View -->
+            <div class="activities-container compact-view" id="compactViewContainer" style="display: none;">
+                <!-- Compact cards will be rendered here by JavaScript -->
+            </div>
+            
+            <!-- Pagination -->
+            <div class="pagination-container" id="paginationContainer">
+                <!-- Pagination will be rendered here by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detailModal" aria-hidden="true">
+        <div class="modal-container" role="dialog" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <h3 id="modalTitle">Activity Details</h3>
+                <button class="modal-close" id="closeModal" aria-label="Close modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Timestamp</span>
+                        <span class="detail-value" id="detailTimestamp"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">User</span>
+                        <span class="detail-value" id="detailUser"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Action</span>
+                        <span class="detail-value" id="detailAction"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Model</span>
+                        <span class="detail-value" id="detailModel"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Object ID</span>
+                        <span class="detail-value" id="detailObjectId"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">IP Address</span>
+                        <span class="detail-value" id="detailIp"></span>
+                    </div>
+                    <div class="detail-item full-width">
+                        <span class="detail-label">Details</span>
+                        <pre class="detail-value details-pre" id="detailDetails"></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="copyDetails">
+                    <i class="fas fa-copy"></i> Copy Details
+                </button>
+                <a href="#" class="btn-primary" id="viewObject" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> View Object
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">
+            <i class="fas fa-clipboard-list"></i>
+        </div>
+        <h3>No activities found</h3>
+        <p>Try adjusting your filters or search criteria</p>
+        <button class="btn-primary" id="resetFiltersBtn">
+            <i class="fas fa-redo"></i> Reset Filters
+        </button>
+    </div>
+</div>
+
+<!-- JSON Data from Django -->
+<script>
+    window.activityLogs = {{ logs_json|default:"[]"|safe }};
+    window.statsData = {
+        total_24h: {{ stats.total_24h|default:"0" }},
+        total_7d: {{ stats.total_7d|default:"0" }},
+        total_all: {{ stats.total_all|default:"0" }},
+        top_actions: {{ stats.top_actions|default:"[]"|safe }},
+        top_models: {{ stats.top_models|default:"[]"|safe }},
+        top_users: {{ stats.top_users|default:"[]"|safe }}
+    };
+</script>
+
+<style>
+/* ==========================================================================
+   CSS VARIABLES & THEME SETUP
+   ========================================================================== */
+:root {
+    /* Light Theme Colors */
+    --primary-color: #4361ee;
+    --primary-light: #eef2ff;
+    --primary-dark: #3730a3;
+    --secondary-color: #8b5cf6;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #3b82f6;
+    
+    /* Neutral Colors */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* Background Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-hover: #f1f5f9;
+    --bg-modal: rgba(15, 23, 42, 0.8);
+    
+    /* Border Colors */
+    --border-light: #e2e8f0;
+    --border-medium: #cbd5e1;
+    --border-dark: #94a3b8;
+    
+    /* Shadow System */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    
+    /* Border Radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: 'Poppins', var(--font-sans);
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+    
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Z-index */
+    --z-dropdown: 10;
+    --z-sticky: 20;
+    --z-modal: 30;
+    --z-popover: 40;
+    --z-tooltip: 50;
+}
+
+/* Dark Theme Variables */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #6366f1;
+        --primary-light: #312e81;
+        --primary-dark: #a5b4fc;
+        --secondary-color: #8b5cf6;
+        
+        --gray-50: #0f172a;
+        --gray-100: #1e293b;
+        --gray-200: #334155;
+        --gray-300: #475569;
+        --gray-400: #64748b;
+        --gray-500: #94a3b8;
+        --gray-600: #cbd5e1;
+        --gray-700: #e2e8f0;
+        --gray-800: #f1f5f9;
+        --gray-900: #f8fafc;
+        
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-card: #1e293b;
+        --bg-hover: #334155;
+        --bg-modal: rgba(0, 0, 0, 0.8);
+        
+        --border-light: #334155;
+        --border-medium: #475569;
+        --border-dark: #64748b;
+    }
+}
+
+/* ==========================================================================
+   BASE STYLES & RESET
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.activity-log-dashboard {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--gray-800);
+    min-height: 100vh;
+    padding: var(--space-lg);
+    position: relative;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--gray-900);
+}
+
+h1 {
+display: none;
+
+}
+
+h2 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-sm);
+}
+.margen-auto{
+    margin: auto 0;
+}
+h3 {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-sm);
+}
+
+h4 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-sm);
+}
+
+p {
+    line-height: 1.6;
+    margin-bottom: var(--space-md);
+}
+
+.subtitle {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    font-weight: 400;
+    display: block;
+    margin-top: var(--space-xs);
+}
+
+/* ==========================================================================
+   HEADER & STATS CARDS
+   ========================================================================== */
+.dashboard-header {
+    margin-bottom: var(--space-2xl);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin: auto 0;
+}
+
+/* Buttons */
+.btn-refresh,
+.btn-export,
+.btn-settings,
+.btn-primary,
+.btn-secondary {
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md);
+    border: none;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.btn-refresh {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--border-light);
+}
+
+.btn-refresh:hover {
+    background: var(--gray-200);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-export {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-export:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+    filter: brightness(1.1);
+}
+
+.btn-settings {
+    background: var(--bg-card);
+    color: var(--gray-700);
+    border: 1px solid var(--border-light);
+}
+
+.btn-settings:hover {
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--border-light);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-200);
+    transform: translateY(-1px);
+}
+
+/* Stats Cards */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: var(--radius-full) 0 0 var(--radius-full);
+}
+
+.stat-card.stat-24h::before {
+    background: var(--info-color);
+}
+
+.stat-card.stat-7d::before {
+    background: var(--warning-color);
+}
+
+.stat-card.stat-users::before {
+    background: var(--success-color);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
+    background: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.stat-24h .stat-icon {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info-color);
+}
+
+.stat-7d .stat-icon {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+}
+
+.stat-users .stat-icon {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    display: block;
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+    margin-bottom: var(--space-xs);
+}
+
+.stat-label {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.stat-trend {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-trend.up {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}
+
+.stat-trend.down {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+/* ==========================================================================
+   FILTERS PANEL
+   ========================================================================== */
+.filters-panel {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.btn-clear-filters {
+    background: transparent;
+    border: none;
+    color: var(--gray-500);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-fast);
+}
+
+.btn-clear-filters:hover {
+    background: var(--gray-100);
+    color: var(--danger-color);
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.filter-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--gray-800);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    transition: all var(--transition-fast);
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--gray-800);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    transition: all var(--transition-fast);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.filter-select[multiple] {
+    height: 120px;
+}
+
+.date-range-group .date-range-inputs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.date-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+}
+
+.date-range-separator {
+    color: var(--gray-400);
+    font-size: var(--text-sm);
+}
+
+.quick-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-light);
+}
+
+.quick-filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--gray-600);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.quick-filter-btn:hover {
+    background: var(--gray-100);
+    border-color: var(--border-medium);
+}
+
+.quick-filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* ==========================================================================
+   CHARTS SECTION
+   ========================================================================== */
+.charts-section {
+
+    margin-bottom: var(--space-2xl);
+}
+
+.chart-container {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.chart-period-select {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--gray-800);
+    font-size: var(--text-sm);
+}
+
+canvas {
+    width: 100% !important;
+    height: 300px !important;
+}
+
+/* ==========================================================================
+   ACTIVITY SECTION
+   ========================================================================== */
+.activity-section {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-light);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.view-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--gray-100);
+    padding: 0.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.view-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.view-btn:hover {
+    background: var(--gray-200);
+}
+
+.view-btn.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.results-count {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.sort-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.sort-select {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--gray-800);
+    font-size: var(--text-sm);
+    font-family: var(--font-sans);
+    min-width: 150px;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+/* ==========================================================================
+   CARD VIEW STYLES
+   ========================================================================== */
+.activities-container.card-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+/* Card View */
+.activity-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    animation: cardAppear 0.3s ease-out;
+}
+
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.activity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.activity-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: var(--radius-full) 0 0 var(--radius-full);
+}
+
+.activity-card.high-severity::before {
+    background: var(--danger-color);
+}
+
+.activity-card.medium-severity::before {
+    background: var(--warning-color);
+}
+
+.activity-card.low-severity::before {
+    background: var(--success-color);
+}
+
+.activity-card.info-severity::before {
+    background: var(--info-color);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-md);
+}
+
+.card-time {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-ago {
+    font-size: var(--text-xs);
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-full);
+    color: var(--gray-600);
+}
+
+.card-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid transparent;
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.badge-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.badge-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.badge-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--info-color);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.badge-primary {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary-color);
+    border-color: rgba(67, 97, 238, 0.2);
+}
+
+.badge-secondary {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-color: var(--border-light);
+}
+
+.model-badge {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    border-color: rgba(67, 97, 238, 0.2);
+}
+
+.model-user {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--secondary-color);
+    border-color: rgba(139, 92, 246, 0.2);
+}
+
+.model-profile {
+    background: rgba(236, 72, 153, 0.1);
+    color: #ec4899;
+    border-color: rgba(236, 72, 153, 0.2);
+}
+
+.model-order {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.model-product {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.model-default {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-color: var(--border-light);
+}
+
+.card-content {
+    margin-bottom: var(--space-md);
+}
+
+.card-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: var(--text-sm);
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-name {
+    font-weight: 500;
+    color: var(--gray-900);
+    margin-bottom: 0.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-email {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-details {
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    color: var(--gray-700);
+    border: 1px solid var(--border-light);
+    max-height: 100px;
+    overflow: hidden;
+    position: relative;
+}
+
+.card-details::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(transparent, var(--gray-50));
+    pointer-events: none;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-light);
+}
+
+.card-meta {
+    display: flex;
+    gap: var(--space-lg);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
+
+.ip-address {
+    font-family: 'Courier New', monospace;
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--gray-700);
+    font-size: 0.75rem;
+}
+
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.card-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.card-action-btn:hover {
+    background: var(--gray-100);
+    transform: translateY(-1px);
+}
+
+.card-action-btn.view:hover {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary-color);
+    border-color: rgba(67, 97, 238, 0.2);
+}
+
+.card-action-btn.details:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+/* ==========================================================================
+   TABLE VIEW STYLES - MODERN DATATABLE
+   ========================================================================== */
+.activities-container.table-view {
+    margin-bottom: var(--space-xl);
+}
+
+.table-wrapper {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.activity-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--text-sm);
+    background: var(--bg-primary);
+}
+
+.activity-table thead {
+    background: var(--gray-50);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.activity-table th {
+    padding: 1rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-700);
+    border-bottom: 2px solid var(--border-light);
+    white-space: nowrap;
+    position: relative;
+}
+
+.table-sort-btn {
+    background: transparent;
+    border: none;
+    padding: 0.5rem 0;
+    font: inherit;
+    color: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-fast);
+}
+
+.table-sort-btn:hover {
+    color: var(--primary-color);
+}
+
+.table-sort-btn .fa-sort {
+    opacity: 0.5;
+    font-size: 0.75rem;
+}
+
+.activity-table tbody tr {
+    background: var(--bg-primary);
+    transition: all var(--transition-fast);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.activity-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.activity-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.activity-table td {
+    padding: 1rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-light);
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Column-specific styles */
+.table-col-time {
+    width: 180px;
+    min-width: 180px;
+}
+
+.table-col-user {
+    width: 200px;
+    min-width: 200px;
+}
+
+.table-col-action {
+    width: 120px;
+    min-width: 120px;
+}
+
+.table-col-model {
+    width: 150px;
+    min-width: 150px;
+}
+
+.table-col-object {
+    width: 100px;
+    min-width: 100px;
+}
+
+.table-col-ip {
+    width: 140px;
+    min-width: 140px;
+}
+
+.table-col-details {
+    min-width: 200px;
+}
+
+.table-col-actions {
+    width: 100px;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Table cell content styling */
+.table-time {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.table-time-main {
+    font-weight: 500;
+    color: var(--gray-900);
+}
+
+.table-time-ago {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    background: var(--gray-100);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full);
+    display: inline-block;
+}
+
+.table-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.table-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: var(--text-sm);
+    flex-shrink: 0;
+}
+
+.table-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.table-user-name {
+    font-weight: 500;
+    color: var(--gray-900);
+    margin-bottom: 0.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-user-email {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-action-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.table-model-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.table-object-id {
+    font-family: 'Courier New', monospace;
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--gray-700);
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.table-ip {
+    font-family: 'Courier New', monospace;
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--gray-700);
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.table-details {
+    color: var(--gray-700);
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+}
+
+.table-details::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    background: linear-gradient(to right, transparent, var(--bg-primary));
+    pointer-events: none;
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.table-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.table-action-btn:hover {
+    background: var(--gray-100);
+    transform: translateY(-1px);
+}
+
+.table-action-btn.view:hover {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary-color);
+    border-color: rgba(67, 97, 238, 0.2);
+}
+
+.table-action-btn.details:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+/* ==========================================================================
+   COMPACT VIEW STYLES
+   ========================================================================== */
+.activities-container.compact-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+}
+
+.compact-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.compact-card:hover {
+    background: var(--bg-hover);
+    transform: translateX(4px);
+}
+
+.compact-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--primary-color);
+}
+
+.compact-card.high-severity::before {
+    background: var(--danger-color);
+}
+
+.compact-card.medium-severity::before {
+    background: var(--warning-color);
+}
+
+.compact-card.low-severity::before {
+    background: var(--success-color);
+}
+
+.compact-card.info-severity::before {
+    background: var(--info-color);
+}
+
+.compact-time {
+    width: 120px;
+    min-width: 120px;
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.compact-time-ago {
+    font-size: var(--text-xs);
+    color: var(--gray-400);
+}
+
+.compact-user {
+    width: 160px;
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.compact-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+}
+
+.compact-user-name {
+    font-weight: 500;
+    color: var(--gray-900);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.compact-action {
+    width: 100px;
+    min-width: 100px;
+}
+
+.compact-action-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid transparent;
+}
+
+.compact-model {
+    width: 120px;
+    min-width: 120px;
+}
+
+.compact-model-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid transparent;
+}
+
+.compact-details {
+    flex: 1;
+    color: var(--gray-700);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+}
+
+.compact-details::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    background: linear-gradient(to right, transparent, var(--bg-primary));
+    pointer-events: none;
+}
+
+.compact-actions {
+    width: 80px;
+    min-width: 80px;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.compact-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    font-size: 0.75rem;
+}
+
+.compact-action-btn:hover {
+    background: var(--gray-100);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   LOADING STATE
+   ========================================================================== */
+.loading-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2xl);
+    color: var(--gray-500);
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border-light);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--space-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   PAGINATION
+   ========================================================================== */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-light);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.pagination-info {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.pagination-btn {
+    min-width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--gray-700);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: var(--gray-100);
+    transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.pagination-page-size {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+}
+
+.page-size-select {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--gray-800);
+    font-size: var(--text-sm);
+}
+
+/* ==========================================================================
+   MODAL
+   ========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-modal);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-container {
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: var(--shadow-2xl);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-close {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+    background: var(--gray-200);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.detail-label {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-value {
+    font-size: var(--text-sm);
+    color: var(--gray-800);
+    padding: 0.5rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.details-pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'Courier New', monospace;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    margin: 0;
+    padding: var(--space-md);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: var(--space-lg);
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+}
+
+/* ==========================================================================
+   EMPTY STATE
+   ========================================================================== */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-2xl);
+    display: none;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: var(--gray-300);
+    margin-bottom: var(--space-lg);
+}
+
+.empty-state h3 {
+    font-size: var(--text-xl);
+    color: var(--gray-700);
+    margin-bottom: var(--space-sm);
+}
+
+.empty-state p {
+    color: var(--gray-500);
+    margin-bottom: var(--space-lg);
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+@media (max-width: 1200px) {
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .activities-container.card-view {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+    
+    .activity-table {
+        font-size: var(--text-xs);
+    }
+    
+    .table-col-time,
+    .table-col-user,
+    .table-col-model {
+        width: auto;
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .activity-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .table-wrapper {
+        min-width: 1000px;
+    }
+}
+
+@media (max-width: 768px) {
+    .activity-log-dashboard {
+        padding: var(--space-md);
+    }
+    
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-md);
+    }
+    
+    .view-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-sm);
+    }
+    
+    .view-toggle {
+        align-self: flex-start;
+    }
+    
+    .sort-controls {
+        width: 100%;
+    }
+    
+    .sort-select {
+        width: 100%;
+    }
+    
+    .activities-container.card-view {
+        grid-template-columns: 1fr;
+    }
+    
+    .compact-card {
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+    }
+    
+    .compact-time,
+    .compact-user,
+    .compact-action,
+    .compact-model {
+        width: calc(50% - var(--space-sm));
+    }
+    
+    .compact-details {
+        order: 1;
+        width: 100%;
+    }
+    
+    .compact-actions {
+        order: 2;
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-md);
+    }
+    
+    .pagination-controls {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+    }
+    
+    .quick-filters {
+        flex-direction: column;
+    }
+    
+    .card-meta {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .table-wrapper {
+        margin: 0 -1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+}
+
+/* ==========================================================================
+   ACCESSIBILITY
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus styles for keyboard navigation */
+:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --primary-color: #0000ff;
+        --success-color: #008000;
+        --warning-color: #ffa500;
+        --danger-color: #ff0000;
+        --border-light: #000000;
+        --border-medium: #000000;
+    }
+    
+    .badge {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Screen reader only text */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Print styles */
+@media print {
+    .activity-log-dashboard {
+        padding: 0;
+    }
+    
+    .header-actions,
+    .filters-panel,
+    .charts-section,
+    .card-actions,
+    .table-actions,
+    .compact-actions,
+    .modal-overlay {
+        display: none !important;
+    }
+    
+    .activity-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .activity-table {
+        border: 1px solid #000;
+    }
+    
+    .activity-table th,
+    .activity-table td {
+        border: 1px solid #000;
+        padding: 0.5rem;
+    }
+}
+</style>
+
+<!-- JavaScript -->
+<script>
+// Main Application
+class ActivityLogDashboard {
+    constructor() {
+        this.logs = window.activityLogs || [];
+        this.filteredLogs = [...this.logs];
+        this.currentPage = 1;
+        this.pageSize = 12;
+        this.currentView = 'card';
+        this.sortBy = 'created_at_desc';
+        this.filters = {
+            search: '',
+            actions: [],
+            models: [],
+            user: '',
+            startDate: '',
+            endDate: '',
+            severity: ''
+        };
+        
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+        this.renderCharts();
+        this.renderActivities();
+        this.renderPagination();
+        this.setupModal();
+        this.updateResultsCount();
+    }
+    
+    setupEventListeners() {
+        // Search input
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', (e) => {
+            this.filters.search = e.target.value;
+            this.applyFilters();
+        });
+        
+        // Action filter
+        const actionFilter = document.getElementById('actionFilter');
+        actionFilter.addEventListener('change', (e) => {
+            this.filters.actions = Array.from(e.target.selectedOptions).map(opt => opt.value);
+            this.applyFilters();
+        });
+        
+        // Model filter
+        const modelFilter = document.getElementById('modelFilter');
+        modelFilter.addEventListener('change', (e) => {
+            this.filters.models = Array.from(e.target.selectedOptions).map(opt => opt.value);
+            this.applyFilters();
+        });
+        
+        // User filter
+        const userFilter = document.getElementById('userFilter');
+        userFilter.addEventListener('change', (e) => {
+            this.filters.user = e.target.value;
+            this.applyFilters();
+        });
+        
+        // Date filters
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        startDate.addEventListener('change', (e) => {
+            this.filters.startDate = e.target.value;
+            this.applyFilters();
+        });
+        endDate.addEventListener('change', (e) => {
+            this.filters.endDate = e.target.value;
+            this.applyFilters();
+        });
+        
+
+        
+        // Quick filters
+        document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const filter = e.target.dataset.filter;
+                this.applyQuickFilter(filter);
+                
+                // Update active state
+                document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+        
+        // Clear filters
+        document.getElementById('clearFilters').addEventListener('click', () => {
+            this.clearFilters();
+        });
+        
+        // View toggle
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.currentView = e.target.dataset.view;
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.switchView();
+            });
+        });
+        
+        // Sort select
+        document.getElementById('sortBy').addEventListener('change', (e) => {
+            this.sortBy = e.target.value;
+            this.applyFilters();
+        });
+        
+        // Table sort buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.table-sort-btn')) {
+                const sortBtn = e.target.closest('.table-sort-btn');
+                const sortField = sortBtn.dataset.sort;
+                this.sortTable(sortField);
+            }
+        });
+        
+        // Refresh button
+        document.getElementById('refreshStats').addEventListener('click', () => {
+            this.refreshDashboard();
+        });
+        
+        // Reset filters button
+        document.getElementById('resetFiltersBtn')?.addEventListener('click', () => {
+            this.clearFilters();
+        });
+    }
+    
+    applyFilters() {
+        this.filteredLogs = this.logs.filter(log => {
+            // Search filter
+            if (this.filters.search) {
+                const searchText = this.filters.search.toLowerCase();
+                const searchable = [
+                    log.action,
+                    log.details,
+                    log.user_display,
+                    log.model_name,
+                    log.object_id
+                ].join(' ').toLowerCase();
+                
+                if (!searchable.includes(searchText)) {
+                    return false;
+                }
+            }
+            
+            // Action filter
+            if (this.filters.actions.length > 0) {
+                const logAction = log.action.toLowerCase();
+                if (!this.filters.actions.some(action => logAction.includes(action))) {
+                    return false;
+                }
+            }
+            
+            // Model filter
+            if (this.filters.models.length > 0) {
+                if (!this.filters.models.includes(log.model_name)) {
+                    return false;
+                }
+            }
+            
+            // User filter
+            if (this.filters.user) {
+                if (log.user_email !== this.filters.user && log.user_display !== this.filters.user) {
+                    return false;
+                }
+            }
+            
+            // Date range filter
+            if (this.filters.startDate) {
+                const logDate = new Date(log.created_at);
+                const startDate = new Date(this.filters.startDate);
+                if (logDate < startDate) {
+                    return false;
+                }
+            }
+            
+            if (this.filters.endDate) {
+                const logDate = new Date(log.created_at);
+                const endDate = new Date(this.filters.endDate);
+                endDate.setHours(23, 59, 59, 999);
+                if (logDate > endDate) {
+                    return false;
+                }
+            }
+            
+            // Severity filter
+            if (this.filters.severity && log.severity !== this.filters.severity) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Apply sorting
+        this.sortLogs();
+        
+        this.currentPage = 1;
+        this.renderActivities();
+        this.renderPagination();
+        this.updateResultsCount();
+        this.toggleEmptyState();
+    }
+    
+    sortLogs() {
+        switch(this.sortBy) {
+            case 'created_at_desc':
+                this.filteredLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                break;
+            case 'created_at_asc':
+                this.filteredLogs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                break;
+            case 'action':
+                this.filteredLogs.sort((a, b) => a.action.localeCompare(b.action));
+                break;
+            case 'user':
+                this.filteredLogs.sort((a, b) => a.user_display.localeCompare(b.user_display));
+                break;
+        }
+    }
+    
+    sortTable(sortField) {
+        // Toggle between ascending and descending
+        const isAscending = this.sortBy === `${sortField}_asc`;
+        this.sortBy = isAscending ? `${sortField}_desc` : `${sortField}_asc`;
+        
+        // Update sort select
+        document.getElementById('sortBy').value = this.sortBy;
+        
+        // Apply sorting
+        this.sortLogs();
+        this.renderActivities();
+    }
+    
+    applyQuickFilter(filter) {
+        const now = new Date();
+        const startDate = new Date();
+        
+        switch(filter) {
+            case '24h':
+                startDate.setDate(now.getDate() - 1);
+                break;
+            case '7d':
+                startDate.setDate(now.getDate() - 7);
+                break;
+            case '30d':
+                startDate.setDate(now.getDate() - 30);
+                break;
+            case 'today':
+                startDate.setHours(0, 0, 0, 0);
+                break;
+        }
+        
+        document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+        document.getElementById('endDate').value = now.toISOString().split('T')[0];
+        
+        this.filters.startDate = startDate.toISOString().split('T')[0];
+        this.filters.endDate = now.toISOString().split('T')[0];
+        
+        this.applyFilters();
+    }
+    
+    clearFilters() {
+        // Reset all filter inputs
+        document.getElementById('searchInput').value = '';
+        document.getElementById('actionFilter').selectedIndex = -1;
+        document.getElementById('modelFilter').selectedIndex = -1;
+        document.getElementById('userFilter').value = '';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        document.getElementById('severityFilter').value = '';
+        document.getElementById('sortBy').value = 'created_at_desc';
+        
+        // Reset quick filters
+        document.querySelectorAll('.quick-filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.quick-filter-btn[data-filter="24h"]').classList.add('active');
+        
+        // Reset filter state
+        this.filters = {
+            search: '',
+            actions: [],
+            models: [],
+            user: '',
+            startDate: '',
+            endDate: '',
+            severity: ''
+        };
+        this.sortBy = 'created_at_desc';
+        
+        this.applyFilters();
+    }
+    
+    switchView() {
+        // Hide all views
+        document.getElementById('cardViewContainer').style.display = 'none';
+        document.getElementById('tableViewContainer').style.display = 'none';
+        document.getElementById('compactViewContainer').style.display = 'none';
+        
+        // Show selected view
+        switch(this.currentView) {
+            case 'card':
+                document.getElementById('cardViewContainer').style.display = 'grid';
+                break;
+            case 'table':
+                document.getElementById('tableViewContainer').style.display = 'block';
+                break;
+            case 'compact':
+                document.getElementById('compactViewContainer').style.display = 'flex';
+                break;
+        }
+        
+        this.renderActivities();
+    }
+    
+    renderActivities() {
+        // Calculate pagination
+        const startIndex = (this.currentPage - 1) * this.pageSize;
+        const endIndex = startIndex + this.pageSize;
+        const pageLogs = this.filteredLogs.slice(startIndex, endIndex);
+        
+        // Clear containers
+        document.getElementById('cardViewContainer').innerHTML = '';
+        document.getElementById('tableBody').innerHTML = '';
+        document.getElementById('compactViewContainer').innerHTML = '';
+        
+        if (pageLogs.length === 0) {
+            this.toggleEmptyState();
+            return;
+        }
+        
+        // Render based on current view
+        switch(this.currentView) {
+            case 'card':
+                this.renderCardView(pageLogs);
+                break;
+            case 'table':
+                this.renderTableView(pageLogs);
+                break;
+            case 'compact':
+                this.renderCompactView(pageLogs);
+                break;
+        }
+        
+        this.toggleEmptyState(false);
+    }
+    
+    renderCardView(logs) {
+        const container = document.getElementById('cardViewContainer');
+        logs.forEach(log => {
+            const card = this.createActivityCard(log);
+            container.appendChild(card);
+        });
+    }
+    
+    renderTableView(logs) {
+        const tbody = document.getElementById('tableBody');
+        logs.forEach(log => {
+            const row = this.createTableRow(log);
+            tbody.appendChild(row);
+        });
+    }
+    
+    renderCompactView(logs) {
+        const container = document.getElementById('compactViewContainer');
+        logs.forEach(log => {
+            const card = this.createCompactCard(log);
+            container.appendChild(card);
+        });
+    }
+    
+    createActivityCard(log) {
+        const card = document.createElement('div');
+        card.className = `activity-card ${log.severity}-severity`;
+        
+        // Format time
+        const time = new Date(log.created_at);
+        const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateString = time.toLocaleDateString();
+        
+        // Get user initials
+        const initials = this.getUserInitials(log.user_display);
+        
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="card-time">
+                    <i class="fas fa-clock"></i>
+                    <span>${dateString} ${timeString}</span>
+                    <span class="time-ago">${log.time_ago}</span>
+                </div>
+                <div class="card-badges">
+                    <span class="badge ${log.action_color}">
+                        <i class="fas fa-${this.getActionIcon(log.action)}"></i>
+                        ${log.action}
+                    </span>
+                    <span class="badge model-badge ${log.model_color}">
+                        <i class="fas fa-cube"></i>
+                        ${log.model_name || 'Unknown'}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card-content">
+                <div class="card-user">
+                    <div class="user-avatar">${initials}</div>
+                    <div class="user-info">
+                        <div class="user-name">${this.escapeHtml(log.user_display)}</div>
+                        ${log.user_email ? `<div class="user-email">${this.escapeHtml(log.user_email)}</div>` : ''}
+                    </div>
+                </div>
+                
+                <div class="card-details" title="${this.escapeHtml(log.details)}">
+                    ${this.escapeHtml(log.details_trunc)}
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <div class="card-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-hashtag"></i>
+                        <span>ID: <strong>${log.object_id || 'N/A'}</strong></span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-network-wired"></i>
+                        <span class="ip-address">${log.ip_address || 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    ${log.object_url ? `
+                        <button class="card-action-btn view" title="View Object" data-object-url="${log.object_url}">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    ` : ''}
+                    <button class="card-action-btn details" title="View Details" data-log-id="${log.id}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        this.addCardEventListeners(card, log);
+        return card;
+    }
+    
+    createTableRow(log) {
+        const row = document.createElement('tr');
+        row.className = `${log.severity}-severity`;
+        
+        // Format time
+        const time = new Date(log.created_at);
+        const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateString = time.toLocaleDateString();
+        
+        // Get user initials
+        const initials = this.getUserInitials(log.user_display);
+        
+        row.innerHTML = `
+            <td class="table-col-time">
+                <div class="table-time">
+                    <span class="table-time-main">${dateString} ${timeString}</span>
+                    <span class="table-time-ago">${log.time_ago}</span>
+                </div>
+            </td>
+            <td class="table-col-user">
+                <div class="table-user">
+                    <div class="table-user-avatar">${initials}</div>
+                    <div class="table-user-info">
+                        <div class="table-user-name">${this.escapeHtml(log.user_display)}</div>
+                        ${log.user_email ? `<div class="table-user-email">${this.escapeHtml(log.user_email)}</div>` : ''}
+                    </div>
+                </div>
+            </td>
+            <td class="table-col-action">
+                <span class="table-action-badge ${log.action_color}">
+                    <i class="fas fa-${this.getActionIcon(log.action)}"></i>
+                    ${log.action}
+                </span>
+            </td>
+            <td class="table-col-model">
+                <span class="table-model-badge ${log.model_color}">
+                    <i class="fas fa-cube"></i>
+                    ${log.model_name || 'Unknown'}
+                </span>
+            </td>
+            <td class="table-col-object">
+                <span class="table-object-id">${log.object_id || 'N/A'}</span>
+            </td>
+            <td class="table-col-ip">
+                <span class="table-ip">${log.ip_address || 'N/A'}</span>
+            </td>
+            <td class="table-col-details" title="${this.escapeHtml(log.details)}">
+                ${this.escapeHtml(log.details_trunc)}
+            </td>
+            <td class="table-col-actions">
+                <div class="table-actions">
+                    ${log.object_url ? `
+                        <button class="table-action-btn view" title="View Object" data-object-url="${log.object_url}">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    ` : ''}
+                    <button class="table-action-btn details" title="View Details" data-log-id="${log.id}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        this.addTableRowEventListeners(row, log);
+        return row;
+    }
+    
+    createCompactCard(log) {
+        const card = document.createElement('div');
+        card.className = `compact-card ${log.severity}-severity`;
+        
+        // Format time
+        const time = new Date(log.created_at);
+        const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateString = time.toLocaleDateString();
+        
+        // Get user initials
+        const initials = this.getUserInitials(log.user_display);
+        
+        card.innerHTML = `
+            <div class="compact-time">
+                <div>${dateString}</div>
+                <div class="compact-time-ago">${log.time_ago}</div>
+            </div>
+            <div class="compact-user">
+                <div class="compact-user-avatar">${initials}</div>
+                <div class="compact-user-name">${this.escapeHtml(log.user_display)}</div>
+            </div>
+            <div class="compact-action">
+                <span class="compact-action-badge ${log.action_color}">
+                    ${log.action}
+                </span>
+            </div>
+            <div class="compact-model">
+                <span class="compact-model-badge ${log.model_color}">
+                    ${log.model_name || 'Unknown'}
+                </span>
+            </div>
+            <div class="compact-details" title="${this.escapeHtml(log.details)}">
+                ${this.escapeHtml(log.details_trunc)}
+            </div>
+            <div class="compact-actions">
+                ${log.object_url ? `
+                    <button class="compact-action-btn view" title="View Object" data-object-url="${log.object_url}">
+                        <i class="fas fa-external-link-alt"></i>
+                    </button>
+                ` : ''}
+                <button class="compact-action-btn details" title="View Details" data-log-id="${log.id}">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+        `;
+        
+        this.addCompactCardEventListeners(card, log);
+        return card;
+    }
+    
+    addCardEventListeners(card, log) {
+        const viewBtn = card.querySelector('.card-action-btn.view');
+        const detailsBtn = card.querySelector('.card-action-btn.details');
+        
+        if (viewBtn) {
+            viewBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.open(viewBtn.dataset.objectUrl, '_blank');
+            });
+        }
+        
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showLogDetails(log);
+            });
+        }
+        
+        // Click anywhere on card to show details
+        card.addEventListener('click', (e) => {
+            if (!e.target.closest('.card-actions')) {
+                this.showLogDetails(log);
+            }
+        });
+    }
+    
+    addTableRowEventListeners(row, log) {
+        const viewBtn = row.querySelector('.table-action-btn.view');
+        const detailsBtn = row.querySelector('.table-action-btn.details');
+        
+        if (viewBtn) {
+            viewBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.open(viewBtn.dataset.objectUrl, '_blank');
+            });
+        }
+        
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showLogDetails(log);
+            });
+        }
+        
+        // Click anywhere on row to show details
+        row.addEventListener('click', (e) => {
+            if (!e.target.closest('.table-actions') && !e.target.closest('.table-sort-btn')) {
+                this.showLogDetails(log);
+            }
+        });
+    }
+    
+    addCompactCardEventListeners(card, log) {
+        const viewBtn = card.querySelector('.compact-action-btn.view');
+        const detailsBtn = card.querySelector('.compact-action-btn.details');
+        
+        if (viewBtn) {
+            viewBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.open(viewBtn.dataset.objectUrl, '_blank');
+            });
+        }
+        
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showLogDetails(log);
+            });
+        }
+        
+        // Click anywhere on card to show details
+        card.addEventListener('click', (e) => {
+            if (!e.target.closest('.compact-actions')) {
+                this.showLogDetails(log);
+            }
+        });
+    }
+    
+    renderPagination() {
+        const container = document.getElementById('paginationContainer');
+        if (!container) return;
+        
+        const totalPages = Math.ceil(this.filteredLogs.length / this.pageSize);
+        const startItem = (this.currentPage - 1) * this.pageSize + 1;
+        const endItem = Math.min(this.currentPage * this.pageSize, this.filteredLogs.length);
+        
+        if (totalPages <= 1 && this.filteredLogs.length <= this.pageSize) {
+            container.innerHTML = `
+                <div class="pagination-info">
+                    Showing ${this.filteredLogs.length} activities
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="pagination-info">
+                Showing ${startItem}-${endItem} of ${this.filteredLogs.length} activities
+            </div>
+            <div class="pagination-controls">
+                <button class="pagination-btn" id="firstPage" ${this.currentPage === 1 ? 'disabled' : ''} title="First Page">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button class="pagination-btn" id="prevPage" ${this.currentPage === 1 ? 'disabled' : ''} title="Previous Page">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+        `;
+        
+        // Calculate page range
+        let startPage = Math.max(1, this.currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            html += `
+                <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" data-page="${i}">
+                    ${i}
+                </button>
+            `;
+        }
+        
+        html += `
+                <button class="pagination-btn" id="nextPage" ${this.currentPage === totalPages ? 'disabled' : ''} title="Next Page">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button class="pagination-btn" id="lastPage" ${this.currentPage === totalPages ? 'disabled' : ''} title="Last Page">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+            <div class="pagination-page-size">
+                <span>Show:</span>
+                <select class="page-size-select" id="pageSizeSelect">
+                    <option value="12" ${this.pageSize === 12 ? 'selected' : ''}>12</option>
+                    <option value="25" ${this.pageSize === 25 ? 'selected' : ''}>25</option>
+                    <option value="50" ${this.pageSize === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${this.pageSize === 100 ? 'selected' : ''}>100</option>
+                </select>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        // Add event listeners
+        document.getElementById('firstPage')?.addEventListener('click', () => this.goToPage(1));
+        document.getElementById('prevPage')?.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+        document.getElementById('nextPage')?.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+        document.getElementById('lastPage')?.addEventListener('click', () => this.goToPage(totalPages));
+        
+        document.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.goToPage(parseInt(e.target.dataset.page));
+            });
+        });
+        
+        // Page size select
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+            this.pageSize = parseInt(e.target.value);
+            this.currentPage = 1;
+            this.renderActivities();
+            this.renderPagination();
+        });
+    }
+    
+    goToPage(page) {
+        if (page < 1 || page > Math.ceil(this.filteredLogs.length / this.pageSize)) {
+            return;
+        }
+        
+        this.currentPage = page;
+        this.renderActivities();
+        this.renderPagination();
+        
+        // Scroll to top of activities section
+        document.querySelector('.activity-section').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+    }
+    
+    renderCharts() {
+        this.renderTimelineChart();
+        this.renderActionDistributionChart();
+    }
+    
+    renderTimelineChart() {
+        const ctx = document.getElementById('activityTimelineChart');
+        if (!ctx) return;
+        
+        // Group logs by day
+        const logsByDay = {};
+        this.logs.forEach(log => {
+            const date = new Date(log.created_at).toISOString().split('T')[0];
+            logsByDay[date] = (logsByDay[date] || 0) + 1;
+        });
+        
+        const dates = Object.keys(logsByDay).sort();
+        const counts = dates.map(date => logsByDay[date]);
+        
+        // If no data, show empty chart
+        if (dates.length === 0) {
+            dates.push(new Date().toISOString().split('T')[0]);
+            counts.push(0);
+        }
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Activities',
+                    data: counts,
+                    borderColor: 'rgba(67, 97, 238, 1)',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff'
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            borderDash: [5, 5]
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    renderActionDistributionChart() {
+        const ctx = document.getElementById('actionDistributionChart');
+        if (!ctx) return;
+        
+        // Count actions
+        const actionCounts = {};
+        this.logs.forEach(log => {
+            const action = log.action || 'Unknown';
+            actionCounts[action] = (actionCounts[action] || 0) + 1;
+        });
+        
+        const actions = Object.keys(actionCounts).slice(0, 5);
+        const counts = actions.map(action => actionCounts[action]);
+        
+        // If no data, show empty chart
+        if (actions.length === 0) {
+            actions.push('No activities');
+            counts.push(1);
+        }
+        
+        const colors = {
+            'create': 'rgba(16, 185, 129, 0.8)',
+            'update': 'rgba(245, 158, 11, 0.8)',
+            'delete': 'rgba(239, 68, 68, 0.8)',
+            'view': 'rgba(59, 130, 246, 0.8)',
+            'login': 'rgba(139, 92, 246, 0.8)',
+            'unknown': 'rgba(107, 114, 128, 0.8)'
+        };
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: actions,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: actions.map(action => {
+                        const actionLower = action.toLowerCase();
+                        return colors[actionLower] || colors['unknown'];
+                    }),
+                    borderWidth: 2,
+                    borderColor: 'var(--bg-card)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            color: 'var(--gray-700)'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff'
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+    
+    setupModal() {
+        this.modal = document.getElementById('detailModal');
+        this.modalClose = document.getElementById('closeModal');
+        this.copyBtn = document.getElementById('copyDetails');
+        this.viewObjectBtn = document.getElementById('viewObject');
+        
+        this.modalClose.addEventListener('click', () => this.hideModal());
+        this.modal.addEventListener('click', (e) => {
+            if (e.target === this.modal) {
+                this.hideModal();
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modal.style.display === 'flex') {
+                this.hideModal();
+            }
+        });
+        
+        this.copyBtn.addEventListener('click', () => {
+            this.copyDetailsToClipboard();
+        });
+    }
+    
+    showLogDetails(log) {
+        // Update modal content
+        document.getElementById('detailTimestamp').textContent = 
+            `${new Date(log.created_at).toLocaleString()} (${log.time_ago})`;
+        document.getElementById('detailUser').textContent = 
+            `${log.user_display} ${log.user_email ? `(${log.user_email})` : ''}`;
+        document.getElementById('detailAction').innerHTML = 
+            `<span class="badge ${log.action_color}">${log.action}</span>`;
+        document.getElementById('detailModel').innerHTML = 
+            `<span class="badge model-badge ${log.model_color}">${log.model_name || 'Unknown'}</span>`;
+        document.getElementById('detailObjectId').textContent = log.object_id || 'N/A';
+        document.getElementById('detailIp').textContent = log.ip_address || 'N/A';
+        document.getElementById('detailDetails').textContent = log.details || 'No details available';
+        
+        // Update view object button
+        if (log.object_url) {
+            this.viewObjectBtn.href = log.object_url;
+            this.viewObjectBtn.style.display = 'inline-flex';
+        } else {
+            this.viewObjectBtn.style.display = 'none';
+        }
+        
+        // Store current log for copying
+        this.currentDetailLog = log;
+        
+        // Show modal
+        this.modal.style.display = 'flex';
+        this.modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    hideModal() {
+        this.modal.style.display = 'none';
+        this.modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+    
+    copyDetailsToClipboard() {
+        if (!this.currentDetailLog) return;
+        
+        const text = `
+Activity Log Details
+===================
+Timestamp: ${new Date(this.currentDetailLog.created_at).toLocaleString()}
+User: ${this.currentDetailLog.user_display} ${this.currentDetailLog.user_email ? `(${this.currentDetailLog.user_email})` : ''}
+Action: ${this.currentDetailLog.action}
+Model: ${this.currentDetailLog.model_name}
+Object ID: ${this.currentDetailLog.object_id || 'N/A'}
+IP Address: ${this.currentDetailLog.ip_address || 'N/A'}
+Details: ${this.currentDetailLog.details || 'No details'}
+        `.trim();
+        
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = this.copyBtn.innerHTML;
+            this.copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            
+            setTimeout(() => {
+                this.copyBtn.innerHTML = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy details: ', err);
+        });
+    }
+    
+    updateResultsCount() {
+        const element = document.getElementById('resultsCount');
+        if (element) {
+            element.textContent = this.filteredLogs.length;
+        }
+    }
+    
+    toggleEmptyState(show = true) {
+        const emptyState = document.getElementById('emptyState');
+        const cardView = document.getElementById('cardViewContainer');
+        const tableView = document.getElementById('tableViewContainer');
+        const compactView = document.getElementById('compactViewContainer');
+        const pagination = document.getElementById('paginationContainer');
+        
+        if (this.filteredLogs.length === 0 && show) {
+            emptyState.style.display = 'block';
+            cardView.style.display = 'none';
+            tableView.style.display = 'none';
+            compactView.style.display = 'none';
+            if (pagination) pagination.style.display = 'none';
+        } else {
+            emptyState.style.display = 'none';
+            if (pagination) pagination.style.display = 'flex';
+        }
+    }
+    
+    refreshDashboard() {
+        // Show loading state
+        const container = document.getElementById('cardViewContainer');
+        container.innerHTML = `
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Refreshing data...</p>
+            </div>
+        `;
+        
+        // Simulate API call (in real app, fetch from server)
+        setTimeout(() => {
+            this.renderActivities();
+            this.renderCharts();
+        }, 1000);
+    }
+    
+    getActionIcon(action) {
+        const actionLower = action.toLowerCase();
+        if (actionLower.includes('create') || actionLower.includes('add')) {
+            return 'plus-circle';
+        } else if (actionLower.includes('update') || actionLower.includes('edit') || actionLower.includes('change')) {
+            return 'edit';
+        } else if (actionLower.includes('delete') || actionLower.includes('remove')) {
+            return 'trash-alt';
+        } else if (actionLower.includes('view') || actionLower.includes('read')) {
+            return 'eye';
+        } else if (actionLower.includes('login')) {
+            return 'sign-in-alt';
+        } else if (actionLower.includes('logout')) {
+            return 'sign-out-alt';
+        } else {
+            return 'info-circle';
+        }
+    }
+    
+    getUserInitials(name) {
+        if (!name || name === '—') return '??';
+        
+        return name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    }
+    
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
+// Initialize the dashboard when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new ActivityLogDashboard();
+});
+
+// Export CSV with current filters
+document.getElementById('exportCsv')?.addEventListener('click', function(e) {
+    // In a real implementation, you would update the export URL with current filters
+    // This is handled server-side by Django
+});
+</script>
+{% endblock %}

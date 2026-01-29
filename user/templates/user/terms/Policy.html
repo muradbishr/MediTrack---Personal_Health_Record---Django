@@ -1,0 +1,100 @@
+{%load static %}
+
+<head>
+      <link rel="stylesheet" href="styles/onboarding.css">
+</head>
+<header class="onboarding-header">
+      <div class="header-left">
+        <div class="logo">
+          <div >
+                        <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo" class="logo_img" style="max-width: 200px;  
+  height: auto;     
+  display: block;
+  margin: 0 auto;">
+
+    </header>
+<div class="max-w-4xl mx-auto px-6 py-10">
+  <h1 class="text-3xl font-bold mb-4">Privacy Policy</h1>
+  <p class="text-sm text-muted-foreground mb-8">
+    Last updated: {{ now|default:"December 1, 2025" }}
+  </p>
+
+  <section class="space-y-6 text-sm leading-relaxed">
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">1. Information We Collect</h2>
+      <ul class="list-disc pl-6 space-y-1">
+        <li>Account information (name, email)</li>
+        <li>Health-related data you choose to store</li>
+        <li>Uploaded medical files and documents</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">2. How We Use Information</h2>
+      <p>
+        Your information is used to provide and improve the platform,
+        facilitate secure sharing with healthcare providers, and maintain
+        system security.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">3. Data Sharing & Access</h2>
+      <p>
+        Your health data is shared only with providers you explicitly approve.
+        We do not sell or rent personal data to third parties.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">4. Data Security</h2>
+      <p>
+        We implement industry-standard security measures to protect your data,
+        including encryption, access controls, and audit logging.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">5. Data Retention</h2>
+      <p>
+        Data is retained only as long as necessary for the purposes described,
+        unless longer retention is required by law.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">6. Your Rights</h2>
+      <ul class="list-disc pl-6 space-y-1">
+        <li>Access your data</li>
+        <li>Update or correct information</li>
+        <li>Revoke provider access</li>
+        <li>Request deletion of your account</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">7. Cookies & Analytics</h2>
+      <p>
+        Cookies may be used for authentication and performance monitoring.
+        We do not use cookies for advertising.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">8. Policy Updates</h2>
+      <p>
+        This Privacy Policy may be updated periodically. Significant changes
+        will be communicated to users.
+      </p>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-semibold mb-2">9. Contact</h2>
+      <p>
+        For privacy-related questions, please contact support.
+      </p>
+    </div>
+
+  </section>
+</div>

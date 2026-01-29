@@ -1,0 +1,596 @@
+{% extends 'base.html' %}
+{% block content %}
+<br>
+  <div class="py-4 text-center">
+    <h1>Upload a document</h1>
+    <p class="lead">Upload an image or PDF. The app runs OCR, then extracts health data fields.</p>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <form id="uploadForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.file }}
+        <div class="mt-3">
+          <button class="btn btn-primary" type="submit" style="background-color: #2563eb;">Upload & Process</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="result" style="display:none;">
+    <h3>OCR Text</h3>
+    <pre class="ocr-box" id="ocrText"></pre>
+
+    <!-- Optional: show model raw output for debugging if backend sends raw_model_text -->
+    <div id="rawModelWrap" style="display:none;">
+      <h3 class="mt-3">Model output (raw)</h3>
+      <pre class="ocr-box" id="modelText"></pre>
+    </div>
+
+    <div class="mt-3">
+      <button id="openConfirmBtn" class="btn btn-outline-primary" style="display:none;">Review & Confirm Parsed Data</button>
+    </div>
+  </div>
+
+  <div id="spinner" style="display:none;">
+    <div class="text-center">
+      <div class="spinner-border" role="status"></div>
+      <p class="mt-2">Processing... this may take a while.</p>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmModalLabel">Confirm extracted patient data</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="confirmForm">
+            <div class="mb-3">
+              <label class="form-label">Patient name</label>
+              <input id="field_name_of_patient" class="form-control" type="text" placeholder="Name of patient">
+            </div>
+
+            <!-- Chronic conditions -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6>Chronic conditions</h6>
+                <button id="addChronicBtn" type="button" class="btn btn-sm btn-outline-secondary">+ Add condition</button>
+              </div>
+              <div id="chronicList" class="list-group"></div>
+            </div>
+
+            <!-- Allergies -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6>Allergies</h6>
+                <button id="addAllergyBtn" type="button" class="btn btn-sm btn-outline-secondary">+ Add allergy</button>
+              </div>
+              <div id="allergyList" class="list-group"></div>
+            </div>
+
+            <!-- Medications -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6>Medications</h6>
+                <button id="addMedBtn" type="button" class="btn btn-sm btn-outline-secondary">+ Add medication</button>
+              </div>
+              <div id="medList" class="list-group"></div>
+            </div>
+
+            <div id="totalTimeWrap" class="mt-2" style="display:none;">
+              <strong>Total processing time:</strong> <span id="totalTime"></span>s
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button id="saveModalBtn" type="button" class="btn btn-success">Confirm & Save</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Helper: read CSRF token from the upload form hidden input
+  function getCsrfToken() {
+    const el = document.querySelector('#uploadForm input[name="csrfmiddlewaretoken"]');
+    return el ? el.value : '';
+  }
+
+  // -------------------------------
+  // Base-schema -> UI-schema converter
+  // Base schema example:
+  // { Name, Date, Status, Severity, Diagnoses[], Allergies[], Medications[] }
+  // UI schema expected by modal:
+  // { name_of_patient, chronic_conditions[], allergies[], medications[] }
+  // -------------------------------
+  function baseToUiSchema(base) {
+    if (!base || typeof base !== 'object') {
+      return { name_of_patient: null, chronic_conditions: [], allergies: [], medications: [] };
+    }
+
+    const ui = {
+      name_of_patient: base.Name ?? null,
+      chronic_conditions: [],
+      allergies: [],
+      medications: []
+    };
+
+    const date = base.Date ?? null;
+    const status = base.Status ?? null;
+    const severity = base.Severity ?? null;
+
+    (base.Diagnoses || []).forEach(d => {
+      if (!d) return;
+      ui.chronic_conditions.push({
+        name: d,
+        date_diagnosed: date,
+        resolved: status,
+        severity: severity
+      });
+    });
+
+    (base.Allergies || []).forEach(a => {
+      if (!a || typeof a !== 'object') return;
+      ui.allergies.push({
+        allergy: a.Allergen ?? null,
+        reaction: a.Reaction ?? null,
+        severity: a.Severity ?? null,
+        type: a.Type ?? null
+      });
+    });
+
+    (base.Medications || []).forEach(m => {
+      if (!m || typeof m !== 'object') return;
+      ui.medications.push({
+        medication: m.Medication ?? null,
+        dosage: m.Dosage ?? null,
+        frequency: m.Frequency ?? null,
+        start_date: m.Started ?? null
+      });
+    });
+
+    return ui;
+  }
+
+  // -------------------------------
+  // FLEXIBLE parsing + normalization
+  // -------------------------------
+  function emptyUiSchema() {
+    return { name_of_patient: null, chronic_conditions: [], allergies: [], medications: [] };
+  }
+
+  function extractJsonFlexible(input) {
+    if (input == null) return null;
+
+    if (typeof input === 'object') return input;
+    if (typeof input !== 'string') return null;
+
+    let s = input.trim();
+
+    // 1) direct JSON parse
+    try { return JSON.parse(s); } catch (e) {}
+
+    // 2) fenced blocks ```json ... ```
+    const fence = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fence && fence[1]) {
+      const inner = fence[1].trim();
+      try { return JSON.parse(inner); } catch (e) { s = inner; }
+    }
+
+    // 3) first balanced {...} object
+    const firstBrace = s.indexOf('{');
+    if (firstBrace !== -1) {
+      let depth = 0;
+      for (let i = firstBrace; i < s.length; i++) {
+        if (s[i] === '{') depth++;
+        else if (s[i] === '}') depth--;
+        if (depth === 0) {
+          const candidate = s.slice(firstBrace, i + 1);
+          try { return JSON.parse(candidate); } catch (e) {}
+          break;
+        }
+      }
+    }
+
+    // 4) greedy regex {...}
+    const m = s.match(/\{[\s\S]*\}/);
+    if (m) {
+      try { return JSON.parse(m[0]); } catch (e) {}
+    }
+
+    return null;
+  }
+
+  function asArray(x) {
+    if (x == null) return [];
+    if (Array.isArray(x)) return x;
+    if (typeof x === 'object') return [x];
+    if (typeof x === 'string') {
+      return x.split(/,|;|\n/).map(t => t.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
+  function pick(obj, keys, fallback = null) {
+    if (!obj || typeof obj !== 'object') return fallback;
+    for (const k of keys) {
+      const v = obj[k];
+      if (v !== undefined && v !== null && v !== '') return v;
+    }
+    return fallback;
+  }
+
+  function normalizeToUiSchema(raw) {
+    let parsed = extractJsonFlexible(raw);
+    if (!parsed || typeof parsed !== 'object') return emptyUiSchema();
+
+    // unwrap common wrapper keys
+    for (const k of ['parsed','data','result','output','response']) {
+      if (parsed[k] && typeof parsed[k] === 'object') { parsed = parsed[k]; break; }
+    }
+
+    // base schema detection
+    if (parsed && typeof parsed === 'object' && parsed.Name !== undefined && parsed.Diagnoses !== undefined) {
+      return baseToUiSchema(parsed);
+    }
+
+    const ui = emptyUiSchema();
+
+    // Name mapping
+    ui.name_of_patient = pick(parsed, [
+      'name_of_patient','patient_name','patient','name','Name','PatientName','Patient'
+    ], null);
+
+    // lists mapping (many possible keys)
+    const chronic = pick(parsed, ['chronic_conditions','conditions','diagnoses','Diagnoses','problems','ProblemList'], []);
+    const allergies = pick(parsed, ['allergies','Allergies','allergy','AllergyList'], []);
+    const meds = pick(parsed, ['medications','Medications','meds','drugs','DrugList'], []);
+
+    // normalize chronic
+    asArray(chronic).forEach(item => {
+      if (item == null) return;
+      if (typeof item === 'string') {
+        ui.chronic_conditions.push({ name: item, date_diagnosed: null, resolved: null, severity: null });
+      } else if (typeof item === 'object') {
+        ui.chronic_conditions.push({
+          name: pick(item, ['name','condition','diagnosis','problem','title','Diagnosis'], null),
+          date_diagnosed: pick(item, ['date_diagnosed','date','diagnosed_on','onset','Date'], null),
+          resolved: pick(item, ['resolved','status','Status'], null),
+          severity: pick(item, ['severity','Severity','level'], null),
+        });
+      }
+    });
+
+    // normalize allergies
+    asArray(allergies).forEach(item => {
+      if (item == null) return;
+      if (typeof item === 'string') {
+        ui.allergies.push({ allergy: item, reaction: null, severity: null, type: null });
+      } else if (typeof item === 'object') {
+        ui.allergies.push({
+          allergy: pick(item, ['allergy','allergen','Allergen','name'], null),
+          reaction: pick(item, ['reaction','Reaction','symptoms'], null),
+          severity: pick(item, ['severity','Severity','level'], null),
+          type: pick(item, ['type','Type','category'], null),
+        });
+      }
+    });
+
+    // normalize meds
+    asArray(meds).forEach(item => {
+      if (item == null) return;
+      if (typeof item === 'string') {
+        ui.medications.push({ medication: item, dosage: null, frequency: null, start_date: null });
+      } else if (typeof item === 'object') {
+        ui.medications.push({
+          medication: pick(item, ['medication','drug','name','Medication'], null),
+          dosage: pick(item, ['dosage','Dose','dose','strength','Dosage'], null),
+          frequency: pick(item, ['frequency','sig','how_often','Frequency'], null),
+          start_date: pick(item, ['start_date','started','Started','Date'], null),
+        });
+      }
+    });
+
+    // salvage if everything empty but text exists
+    if (!ui.name_of_patient && ui.chronic_conditions.length === 0 && ui.allergies.length === 0 && ui.medications.length === 0) {
+      const possibleText = pick(parsed, ['text','Text','content','Content'], null);
+      if (typeof possibleText === 'string') {
+        const nameMatch = possibleText.match(/patient\s*name\s*:\s*(.+)/i) || possibleText.match(/name\s*:\s*(.+)/i);
+        if (nameMatch) ui.name_of_patient = nameMatch[1].trim();
+
+        const diagMatch = possibleText.match(/(diagnoses|conditions)\s*:\s*([^\n]+)/i);
+        if (diagMatch) {
+          diagMatch[2].split(/,|;/).map(s => s.trim()).filter(Boolean).forEach(d => {
+            ui.chronic_conditions.push({ name: d, date_diagnosed: null, resolved: null, severity: null });
+          });
+        }
+      }
+    }
+
+    return ui;
+  }
+
+  // ---------- Utilities to create list rows ----------
+  function createListRow(container, fields, values = {}) {
+    const row = document.createElement('div');
+    row.className = 'list-group-item mb-2';
+
+    const inner = document.createElement('div');
+    inner.className = 'd-flex gap-2 flex-wrap align-items-start';
+
+    const inputsWrapper = document.createElement('div');
+    inputsWrapper.style.flex = '1 1 auto';
+
+    fields.forEach(f => {
+      const formGroup = document.createElement('div');
+      formGroup.className = 'mb-2';
+
+      const label = document.createElement('label');
+      label.className = 'form-label small';
+      label.textContent = f.label || f.name;
+
+      const input = document.createElement('input');
+      input.className = 'form-control form-control-sm';
+      input.placeholder = f.placeholder || '';
+      input.dataset.field = f.name;
+      input.value = (values[f.name] !== undefined && values[f.name] !== null) ? values[f.name] : '';
+
+      formGroup.appendChild(label);
+      formGroup.appendChild(input);
+      inputsWrapper.appendChild(formGroup);
+    });
+
+    const btns = document.createElement('div');
+    btns.style.minWidth = '90px';
+    btns.className = 'd-flex flex-column gap-2 align-items-end';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-sm btn-outline-danger';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => row.remove());
+
+    btns.appendChild(removeBtn);
+    inner.appendChild(inputsWrapper);
+    inner.appendChild(btns);
+    row.appendChild(inner);
+    container.appendChild(row);
+    return row;
+  }
+
+  function addChronicRow(values) {
+    const container = document.getElementById('chronicList');
+    return createListRow(container, [
+      { name: 'name', label: 'Condition name', placeholder: 'e.g. Hypertension' },
+      { name: 'date_diagnosed', label: 'Date diagnosed', placeholder: 'YYYY-MM-DD or MM/DD/YYYY'  },
+      { name: 'resolved', label: 'Status / resolved', placeholder: 'Ongoing / Resolved' },
+      { name: 'severity', label: 'Severity', placeholder: 'e.g High' },
+    ], values || {});
+  }
+
+  function addAllergyRow(values) {
+    const container = document.getElementById('allergyList');
+    return createListRow(container, [
+      { name: 'allergy', label: 'Allergen', placeholder: 'e.g. Penicillin' },
+      { name: 'reaction', label: 'Reaction', placeholder: 'e.g. Hives' },
+      { name: 'severity', label: 'Severity', placeholder: 'e.g. High / Moderate' },
+      { name: 'type', label: 'Type', placeholder: 'e.g. Drug / Food / Environmental' },
+    ], values || {});
+  }
+
+  function addMedRow(values) {
+    const container = document.getElementById('medList');
+    return createListRow(container, [
+      { name: 'medication', label: 'Medication', placeholder: 'e.g. Lisinopril' },
+      { name: 'dosage', label: 'Dosage', placeholder: 'e.g. 10 mg' },
+      { name: 'frequency', label: 'Frequency', placeholder: 'e.g. Once daily' },
+      { name: 'start_date', label: 'Start date', placeholder: 'YYYY-MM-DD or MM/DD/YYYY' },
+    ], values || {});
+  }
+
+  // ---------- Populate modal ----------
+  function populateModal(anyModelOutput) {
+    const parsed = normalizeToUiSchema(anyModelOutput);
+
+    document.getElementById('field_name_of_patient').value = parsed.name_of_patient || '';
+
+    const chronicList = document.getElementById('chronicList');
+    const allergyList = document.getElementById('allergyList');
+    const medList = document.getElementById('medList');
+    chronicList.innerHTML = '';
+    allergyList.innerHTML = '';
+    medList.innerHTML = '';
+
+    (parsed.chronic_conditions || []).forEach(c => addChronicRow(c));
+    (parsed.allergies || []).forEach(a => addAllergyRow(a));
+    (parsed.medications || []).forEach(m => addMedRow(m));
+
+    if (!chronicList.children.length) addChronicRow({});
+    if (!allergyList.children.length) addAllergyRow({});
+    if (!medList.children.length) addMedRow({});
+
+  
+  }
+
+  // ---------- Collect data from modal ----------
+  function collectFromModal() {
+    const obj = {};
+    obj.name_of_patient = document.getElementById('field_name_of_patient').value || null;
+
+    function collectList(containerId) {
+      const container = document.getElementById(containerId);
+      const out = [];
+      for (const item of container.children) {
+        const fields = {};
+        for (const input of item.querySelectorAll('input')) {
+          const k = input.dataset.field;
+          if (!k) continue;
+          const v = input.value.trim();
+          fields[k] = v === '' ? null : v;
+        }
+        const anyNonNull = Object.values(fields).some(x => x !== null);
+        if (anyNonNull) out.push(fields);
+      }
+      return out;
+    }
+
+    obj.chronic_conditions = collectList('chronicList');
+    obj.allergies = collectList('allergyList');
+    obj.medications = collectList('medList');
+
+    
+    return obj;
+  }
+
+  // ---------- Hook up UI events ----------
+  document.getElementById('addChronicBtn').addEventListener('click', () => addChronicRow({}));
+  document.getElementById('addAllergyBtn').addEventListener('click', () => addAllergyRow({}));
+  document.getElementById('addMedBtn').addEventListener('click', () => addMedRow({}));
+
+  // Raw JSON preview edits -> reflect back
+
+  // Save from modal
+  document.getElementById('saveModalBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveModalBtn');
+    btn.disabled = true;
+
+    try {
+      const parsed = collectFromModal();
+      if (!parsed) throw new Error('No parsed data available');
+
+      let extractionId = window._currentRecordId || null;
+
+      const saveResp = await fetch('/MedExtractor/save/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ id: extractionId, parsed })
+      });
+
+      const saveText = await saveResp.text();
+      if (!saveResp.ok) throw new Error('Save failed (' + saveResp.status + '): ' + (saveText || saveResp.statusText));
+
+      // Import
+      const importResp = await fetch('/api/import-extracted-health/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ parsed, _extraction_id: extractionId })
+      });
+
+      const importText = await importResp.text();
+      if (!importResp.ok) throw new Error('Health import failed: (' + importResp.status + ') ' + (importText || importResp.statusText));
+
+      const modalEl = document.getElementById('confirmModal');
+      const bsModal = bootstrap.Modal.getInstance(modalEl);
+      if (bsModal) bsModal.hide();
+      alert('Health data saved and imported successfully!');
+      window.location.href = '/MedExtractor/records/';
+
+    } catch (err) {
+      console.error('Save/import error:', err);
+      alert('Error while saving/importing: ' + (err.message || err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Keep raw preview in sync with inputs
+  document.getElementById('confirmForm').addEventListener('input', () => {
+    clearTimeout(rawPreviewTimeout);
+    rawPreviewTimeout = setTimeout(() => {
+      const obj = collectFromModal();
+    }, 300);
+  });
+
+  function formatMinSec(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+  // ---------- Upload form submit ----------
+  const uploadForm = document.getElementById('uploadForm');
+  uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const t0 = performance.now();
+
+    const form = new FormData(uploadForm);
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('openConfirmBtn').style.display = 'none';
+
+    try {
+      const resp = await fetch('/MedExtractor/process/', { method: 'POST', body: form });
+      const data = await resp.json();
+
+      document.getElementById('spinner').style.display = 'none';
+
+      if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+      }
+
+      document.getElementById('result').style.display = 'block';
+
+      const totalSeconds = (performance.now() - t0) / 1000;
+      document.getElementById('totalTimeWrap').style.display = 'block';
+      document.getElementById('totalTime').textContent = formatMinSec(totalSeconds);
+
+      document.getElementById('ocrText').textContent = data.ocr_text || '';
+
+      // Optional: show raw model output if backend sends it
+      if (data.raw_model_text) {
+        document.getElementById('rawModelWrap').style.display = 'block';
+        document.getElementById('modelText').textContent = data.raw_model_text;
+      } else {
+        document.getElementById('rawModelWrap').style.display = 'none';
+      }
+
+      window._currentRecordId = data.id;
+
+      // FLEXIBLE: accept parsed object, or raw model text, or null
+      populateModal(data.parsed ?? data.raw_model_text ?? null);
+
+      document.getElementById('openConfirmBtn').style.display = 'inline-block';
+
+      const modalEl = document.getElementById('confirmModal');
+      const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+      bsModal.show();
+
+    } catch (err) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('totalTimeWrap').style.display = 'none';
+
+      alert('Processing error: ' + err);
+    }
+  });
+
+  // manual open
+  document.getElementById('openConfirmBtn').addEventListener('click', () => {
+    const modalEl = document.getElementById('confirmModal');
+    const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+    bsModal.show();
+  });
+
+  // Initialize empty form
+  document.addEventListener('DOMContentLoaded', () => {
+    populateModal(emptyUiSchema());
+  });
+</script>
+
+{% endblock %}

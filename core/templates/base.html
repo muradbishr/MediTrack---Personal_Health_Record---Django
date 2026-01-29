@@ -1,0 +1,44 @@
+{% load static %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MedExractor</title>
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+    <style>
+      body { padding-top: 4.5rem; }
+      .container-max { max-width: 900px; }
+      pre.ocr-box { white-space: pre-wrap; background:#f8f9fa; padding:1rem; border-radius:8px; }
+    </style>
+  </head>
+  <body style="padding-top: 0%;">
+    <nav class="navbar navbar-expand-md navbar-dark bg-primary fixed-top aura-navbar">
+      <div class="container">
+        <a class="navbar-brand" href="{% url 'index' %}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+     xmlns="http://www.w3.org/2000/svg"
+     style="color:white">
+  <path d="M12 2L13.8 7.2L19 9L13.8 10.8L12 16L10.2 10.8L5 9L10.2 7.2L12 2Z"
+        fill="currentColor"/>
+  <path d="M19 14L19.9 16.1L22 17L19.9 17.9L19 20L18.1 17.9L16 17L18.1 16.1L19 14Z"
+        fill="currentColor"/>
+</svg>
+MedExractor</a>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="{% url 'records' %}">Records</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'user:files-reports' %}">Back to Files</a></li>
+
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container container-max">
+      {% block content %}{% endblock %}
+    </main>
+
+    <script src="{% static 'core/script.js' %}"></script>
+  </body>
+</html>

@@ -1,0 +1,73 @@
+{% extends "user/base.html" %}
+{% load static %}
+
+{% block content %}
+        <!-- Page-specific content will appear here -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediTrack - Your Personal Medical Record</title>
+  <link rel="stylesheet" href=" {% static 'user/css/landing.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="landing-container">
+    <!-- Background Elements -->
+    <div class="bg-elements">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-circle bg-circle-3"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="landing-content">
+      <!-- Logo -->
+      <div class="logo-container">
+        <div >
+          <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo"  style="max-width: 250px;
+  height: auto;     
+  display: block;
+  margin: 0 auto;">
+        </div>
+      </div>
+
+      <!-- Title -->
+      <h1 class="landing-title">MediTrack</h1>
+
+      <!-- Subtitle -->
+      <p class="landing-subtitle">
+        Your personal medical record, simplified and secure
+      </p>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <a href="{% url 'user:onboarding' %}" class="btn btn-primary">
+
+        
+          Get Started
+        </a>
+        <a class="btn btn-secondary" href="{% url 'user:login' %}" >
+          Log In
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="landing-footer">
+      <p>&copy; 2025 MediTrack. All rights reserved.</p>
+    </div>
+  </div>
+  <script>
+  const onboardingUrl = "{% url 'user:onboarding' %}";
+  const loginUrl = "{% url 'user:login' %}";
+</script>
+
+  <script src="{% static 'user/js/landing.js' %}"></script>
+</body>
+</html>
+{% endblock %}

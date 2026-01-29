@@ -1,0 +1,871 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediTrack - Care Provider</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}">
+    <link rel="stylesheet" href="{% static 'user/css/fontawesome/css/all.min.css' %}">
+
+
+</head>
+<body>
+    <div class="flex h-screen bg-background">
+        <!-- Sidebar -->
+        <div class="w-64 bg-sidebar border-r border-sidebar-border flex flex-col shadow-sm">
+            <!-- Header -->
+            <div class="p-6  border-sidebar-border">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center">
+                        <div class="logo">
+                            <img src="{% static 'images/logo.png'%}" alt="MediTrack Logo">
+                            
+                        </div>
+
+                    </div>
+                    <div>
+                        <h2 class="text-sidebar-foreground font-semibold">MediTrack</h2>
+                        <p class="text-sidebar-accent-foreground text-xs" style="color: black;">Care Provider Portal</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-1">
+                <button class="btn btn-ghost btn-nav active" data-section="provider-dashboard">
+                    <span class="fas fa-cube"></span>
+                    Provider Dashboard
+                </button>
+                <button class="btn btn-ghost btn-nav" data-section="provider-pending-requests">
+                    <span class="fas fa-clock"></span>
+                    Pending Requests
+                </button>
+                <button class="btn btn-ghost btn-nav" data-section="provider-patients">
+                    <span class="fas fa-users"></span>
+                    My Patients
+                </button>
+
+                
+              
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-sidebar-border">
+                <div class="flex items-center gap-3 text-sidebar-foreground">
+                    <div >
+                          <img class="avatar-circle" src="{% url 'user:initial-avatar' user.pk %}?size=64" alt="{{ user.get_full_name }}">
+
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium" style="margin: 0%;">Dr. {{provider.first_name}} {{provider.last_name}}</p>
+                        <p class="text-xs text-sidebar-accent-foreground" style="color: black; margin-bottom: 10%;">{{provider.email}}</p>
+                        <a href="{% url 'user:logout' %}" class="text-xs" style="color: red;" >Sign Out</a>
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- Provider Dashboard -->
+            <div id="provider-dashboard" class="content-section flex-1 overflow-auto">
+                <div class="bg-card border-b p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-semibold">Provider Dashboard</h1>
+                            <p class="text-muted-foreground">Welcome, Dr. {{provider.first_name}} {{provider.last_name}}</p>
+                        </div>
+                        <div class="badge badge-secondary px-3 py-1">{{provider.provider_specialty}}</div>
+                        
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="card hover:shadow-lg transition-all duration-200 cursor-pointer shadow-sm" onclick="showSection('provider-patients')">
+                            <div class="card-header flex flex-row items-center justify-between pb-2">
+                                <h3 class="card-title text-sm font-medium text-muted-foreground">Assigned Patients</h3>
+                                <div class="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center">
+                                    <span class="fas fa-users" style="color: rgb(2 132 199);"></span>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-3xl font-bold text-primary">{{pationt|length}}</div>
+                                <p class="text-xs text-muted-foreground mt-1">Active access grants</p>
+                            </div>
+                        </div>
+
+                        <div class="card hover:shadow-lg transition-all duration-200 cursor-pointer shadow-sm" onclick="showSection('provider-pending-requests')">
+                            <div class="card-header flex flex-row items-center justify-between pb-2">
+                                <h3 class="card-title text-sm font-medium text-muted-foreground">Pending Requests</h3>
+                                <div class="w-8 h-8 bg-orange-50 rounded-full flex items-center justify-center">
+                                    <span class="fas fa-clock"style="color: rgb(217 119 6);"></span>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-3xl font-bold text-orange-600">{{pending_requests.count}}</div>
+                                <p class="text-xs text-muted-foreground mt-1">Awaiting your response</p>
+                            </div>
+                        </div>
+
+                        <div class="card hover:shadow-lg transition-all duration-200 cursor-pointer shadow-sm">
+                            <div class="card-header flex flex-row items-center justify-between pb-2">
+                                <h3 class="card-title text-sm font-medium text-muted-foreground">Reports</h3>
+                                <div class="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center">
+                                    <span class="fas fa-file"style="color: rgb(22 163 74);"></span>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-3xl font-bold text-green-600">{{dcumantCount}}</div>
+                                <p class="text-xs text-muted-foreground mt-1">Available documents</p>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-header flex flex-row items-center justify-between pb-2">
+                                <h3 class="card-title text-sm font-medium text-muted-foreground">Chronic Desises</h3>
+                                <div class="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center">
+                                    <span class="fas fa-table" style="color: rgb(124 58 237);"></span>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-3xl font-bold text-purple-600">{{chronicCount}}</div>
+                                <p class="text-xs text-muted-foreground mt-1">Amongest patients</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Quick Actions</h3>
+                            <p class="text-sm text-muted-foreground">Common tasks and shortcuts</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button class="btn btn-outline h-20 flex flex-col gap-2" onclick="showSection('provider-pending-requests')">
+                                    <span class="fas fa-clock"></span>
+                                    Review Requests
+                                </button>
+                                <button class="btn btn-outline h-20 flex flex-col gap-2" onclick="showSection('provider-patients')">
+                                    <span class="fas fa-users"></span>
+                                    View Patients
+                                </button>
+                              
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Provider Pending Requests -->
+<!-- Provider Pending Requests -->
+
+    <!-- Provider Pending Requests -->
+
+<div id="provider-pending-requests" class="content-section flex-1 overflow-auto">
+
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+        <div class="bg-card border-b p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-semibold">Pending Requests</h1>
+                    <p class="text-muted-foreground">Review and respond to patient access requests</p>
+                </div>
+                <div class="badge badge-secondary px-3 py-1">{{ pending_requests.count }} pending</div>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="flex gap-4 items-center">
+                
+<input id="request-search" type="text" class="input" placeholder="Search patients...">
+            </div>
+
+            <div class="space-y-4" id="pending-list">
+                {% for request in pending_requests %}
+                <div id="request-card-{{ request.id }}" class="card">
+                    <div class="card-content p-6">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start gap-4">
+                                <div class="w-3 h-3 {% if request.data_scope == 'full' %}bg-red-500{% else %}bg-yellow-500{% endif %} rounded-full mt-2"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3 class="font-semibold">{{ request.from_user.first_name }} {{ request.from_user.last_name }}</h3>
+                                        <div class="badge badge-secondary">{{ request.data_scope|capfirst }}</div>
+                                    </div>
+                                    <p class="patient-email text-xs text-muted-foreground">{{ request.from_user.email }}</p>
+
+                                    <p class="text-muted-foreground mb-3">{{ request.message }}</p>
+                                    <p class="text-xs text-muted-foreground">Requested: {{ request.created_at|date:"M d, Y \\a\\t h:i A" }}</p>
+                                </div>
+                                                                
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-outline" onclick="handleRequest('decline', {{ request.id }})">Decline</button>
+                                <button class="btn btn-primary" onclick="handleRequest('accept', {{ request.id }})">Accept</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted-foreground">No pending requests at the moment.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+
+            <!-- Provider Patients -->
+            <div id="provider-patients" class="content-section flex-1 overflow-auto hidden">
+                <div class="bg-card border-b p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-semibold">My Patients</h1>
+                            <p class="text-muted-foreground">Patients you currently have access to</p>
+                        </div>
+                        <div class="badge badge-secondary px-3 py-1">{{active_count}} active</div>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-6">
+                     <!-- Search Patients -->
+<div class="flex items-center gap-2">
+  <div class="relative flex-1">
+    <input
+      id="patient-search"
+      type="text"
+      class="input input-bordered w-full"
+      placeholder="Search patients by name..."
+      autocomplete="off"
+    />
+  </div>
+
+</div>
+
+              <div class="flex gap-2 flex-wrap items-center">
+                
+                <button class="btn btn-outline patient-filter active" data-filter="active">Active</button>
+                <button class="btn btn-outline patient-filter" data-filter="new">New</button>
+                <button class="btn btn-outline patient-filter" data-filter="hidden">Done</button>
+                <button class="btn btn-outline patient-filter" data-filter="all">All</button>
+              </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="patients-grid">
+  {% for item in pationt %}
+    <div class="card hover:shadow-lg transition-all duration-200 cursor-pointer patient-card"
+        data-access-pk="{{ item.access.pk }}"
+     data-active="{{ item.access.active|yesno:'true,false' }}"
+data-hidden="{{ item.access.active|yesno:'false,true' }}"
+data-granted="{{ item.access.granted_at|date:'c' }}">
+
+
+      <div class="card-content p-6">
+
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span class="fas fa-check"></span>
+            </div>
+            <div>
+              <h3 class="font-semibold patient-fullname">
+                {{ item.access.user.first_name }} {{ item.access.user.last_name }}
+              </h3>
+              <p class="text-sm text-muted-foreground ">
+                {{ item.access.user.id }}
+              </p>
+            </div>
+          </div>
+          <div class="badge badge-secondary grant-status-badge">
+            {% if item.access.active %}Active{% else %}Done{% endif %}
+          </div>
+
+        </div>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-muted-foreground">Access Level:</span>
+            <span class="font-medium">{{ item.access.data_scope }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-muted-foreground">Permissions:</span>
+          </div>
+        </div>
+
+        <!-- ✅ THIS IS WHY YOU CAME HERE -->
+        <div class="access-permissions-summary flex gap-2 flex-wrap mb-4">
+          {% for perm in item.permissions %}
+            <div class="badge badge-secondary text-xs">
+              {{ perm }}
+            </div>
+          {% empty %}
+            <span class="text-muted text-xs">No permissions</span>
+          {% endfor %}
+        </div>
+
+        <button class="btn btn-primary w-full"
+                onclick="event.stopPropagation(); viewPatientDetails({{ item.access.pk }});">
+          View Details
+        </button>
+
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+                </div>
+            </div>
+
+            <!-- Provider Patient Detail -->
+            <div id="provider-patient-detail" class="content-section flex-1 overflow-auto hidden">
+                <div class="bg-card border-b p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <button class="btn btn-outline" onclick="showSection('provider-patients')">
+                                <span class="fas fa-chevron-left"></span>
+                                Back to Patients
+                            </button>
+                            <div>
+                                <h1 class="text-2xl font-semibold">Patient Details</h1>
+                                <p class="text-muted-foreground">Comprehensive patient information and records</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-outline"
+        onclick="exportHealthCSV()">
+  Export Data (CSV)
+</button>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Patient Information</h3>
+                            </div>
+                           <!-- جزء من provider-patient-detail -->
+<div class="card-content space-y-4">
+  <div class="flex items-center gap-4">
+    <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+      <span class="fas fa-user fa-2x"></span>
+    </div>
+    <div>
+      <h3 id="patient-name" class="font-semibold">-</h3>
+      <p id="patient-id" class="text-sm text-muted-foreground">ID: -</p>
+      <div id="patient-access-badge" class="badge badge-secondary mt-1">full</div>
+    </div>
+  </div>
+
+  <div class="space-y-2">
+    <div class="flex justify-between">
+      <span class="text-muted-foreground">Date of Birth:</span>
+      <span id="patient-dob" class="font-medium">-</span>
+    </div>
+    <div class="flex justify-between">
+      <span class="text-muted-foreground">Age:</span>
+      <span id="patient-age" class="font-medium">-</span>
+    </div>
+    <div class="flex justify-between">
+      <span class="text-muted-foreground">Gender:</span>
+      <span id="patient-gender" class="font-medium">-</span>
+    </div>
+    <div class="flex justify-between">
+      <span class="text-muted-foreground">Blood Type:</span>
+      <span id="patient-blood" class="font-medium">-</span>
+    </div>
+  </div>
+</div>
+
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Access Information</h3>
+                            </div>
+                            <div class="card-content space-y-4">
+                               <div class="space-y-2">
+  <div class="flex justify-between">
+    <span class="text-muted-foreground">Access Level:</span>
+    <span id="access-level" class="font-medium">—</span>
+  </div>
+  <div class="flex justify-between">
+    <span class="text-muted-foreground">Granted:</span>
+    <span id="access-granted" class="font-medium">—</span>
+  </div>
+
+</div>
+
+<div>
+  <h4 class="font-medium mb-2">Permissions</h4>
+  <div id="access-permissions" class="flex gap-2 flex-wrap">
+    <!-- JS سيضيف badges هنا -->
+  </div>
+</div>
+
+<button
+  class='btn btn-primary' 
+  onclick="deletePatientCurrent()">
+  Done
+</button>
+
+
+
+                            </div>
+                        </div>
+
+                        <div class="card" style="overflow: scroll;max-height: 400px; scrollbar-width:none;">
+                            <div class="card-header">
+                                <h3 class="card-title">Emergency Contact</h3>
+                            </div>
+                            <div class="card-content space-y-4">
+  <div id="emergency-contacts-list">
+    <!-- JS سيعرض هنا عناصر اتصال طارئ (يمكن قائمة أو أول عنصر) -->
+  
+  </div>
+</div>
+
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Health Data</h2>
+                        </div>
+              <div class="card-content">
+                             <div class="card-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h3 class="btn btn-primary">Chronic Diseases</h3>
+                    
+                  </div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Date Diagnosed</th>
+      <th>Status</th>
+      <th>Severity</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="chronic-table-body">
+    <!-- JS سيملأ هنا -->
+  </tbody>
+</table>
+
+              </div>
+                    </div>
+                                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Health Data</h2>
+                        </div>
+              <div class="card-content">
+                   <div class="card-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h3 class="btn btn-primary">Current Medications</h3>
+                   
+                  </div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Medication</th>
+      <th>Dosage</th>
+      <th>Frequency</th>
+      <th>Started</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="med-table-body">
+  </tbody>
+</table>
+
+              </div>
+                    </div>
+                                                        <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Health Data</h2>
+                        </div>
+              <div class="card-content">
+                     <div class="card-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h3 class="btn btn-primary">Allergies</h3>
+                    
+                  </div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Allergen</th>
+      <th>Type</th>
+      <th>Severity</th>
+      <th>Reaction</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="allergy-table-body">
+  </tbody>
+</table>
+
+
+              </div>
+                    </div>
+                    
+                    <!-- Provider: Family Medical History (dynamic) -->
+                    <!-- Family Medical History (dynamic) -->
+<div class="card" id="provider-family-history-card">
+  <div class="card-header">
+    <h3 class="card-title">Health Data</h3>
+    <!-- Add button will be injected automatically if not present -->
+  </div>
+
+  <div class="card-content">
+    <div class="card-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h3 class="btn btn-primary">Family Medical History</h3>
+                    
+                  </div>
+    <!-- Desktop table -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Condition</th>
+          <th>Relation</th>
+          <th>Age of Onset</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="family-table-body">
+        <!-- rows injected here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Family Modal (single modal for add/edit) -->
+<div id="family-modal" class="hidden" aria-hidden="true">
+  <div class="modal-backdrop"
+       onclick="(function(e){ if(e.target===this) closeFamilyModal(); }).call(this, event)">
+    <div class="modal-card" role="dialog" onclick="event.stopPropagation()">
+
+      <h3 id="family-modal-title">Edit Family History</h3>
+
+      <div id="family-modal-body">
+        <div class="form-row">
+          <label>Condition</label>
+          <input id="family-condition" class="input" />
+        </div>
+
+        <div class="form-row">
+          <label>Relationship</label>
+          <select id="family-relationship" class="input">
+            <option value="mother">Mother</option>
+            <option value="father">Father</option>
+            <option value="brother">Brother</option>
+            <option value="sister">Sister</option>
+            <option value="grandmother">Grandmother</option>
+            <option value="grandfather">Grandfather</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Age of Onset</label>
+          <input id="family-age" type="number" min="0" class="input" />
+        </div>
+
+        <div class="form-row">
+          <label>Notes</label>
+          <textarea id="family-notes" class="input"></textarea>
+        </div>
+
+        <div id="family-error"
+             style="color:#b91c1c; display:none; margin-top:6px;"></div>
+      </div>
+
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+        <button class="btn-inline btn-cancel" onclick="closeFamilyModal()">Cancel</button>
+        <button class="btn-inline btn-save"
+                id="family-save-btn"
+                onclick="submitFamilyModal()">Save</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Files & Reports</h2>
+                        </div>
+<div id="files-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <!-- JS  بطاقات ملفات هنا -->
+</div>
+
+                    </div>
+                    <div class="card">
+  <div class="card-header flex flex-row items-center justify-between">
+    <div>
+      <h3 class="card-title">Provider Notes</h3>
+      <p class="text-sm text-muted-foreground">
+        Your private notes about this patient
+      </p>
+    </div>
+
+    <button class="btn btn-outline" onclick="editProviderNotes()">
+      <span class="fas fa-edit"></span>
+      Add Notes
+    </button>
+  </div>
+
+  <div class="card-content">
+
+    <!-- ✅ REAL NOTES DISPLAY (starts empty) -->
+    <div id="provider-notes-display" class="space-y-4">
+      <p class="text-sm text-muted-foreground">
+        No provider notes yet.
+      </p>
+    </div>
+
+    <!-- ✏️ EDITOR -->
+    <div id="provider-notes-editor" class="hidden">
+      <div class="form-group">
+        <label class="form-label">Add New Note</label>
+        <textarea
+          id="provider-note-text"
+          class="textarea"
+          placeholder="Enter your notes here..."
+          rows="4"
+        ></textarea>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-primary" onclick="saveProviderNotes()">
+          <span class="fas fa-save"></span>
+          Save Note
+        </button>
+        <button class="btn btn-outline" onclick="cancelEditNotes()">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+                </div>
+            </div>             
+    </div>
+    </div>
+
+    <!-- Modal بسيط لإضافة/تعديل -->
+<div id="med-modal" class="hidden" aria-hidden="true">
+  <div class="modal-backdrop" onclick="closeMedModal(event)">
+    <div class="modal-card" role="dialog" onclick="event.stopPropagation()">
+      <h3 id="med-modal-title">Edit Medication</h3>
+      <div id="med-modal-body">
+        <div class="form-row"><label>Medication</label><input id="med-name" class="input" required /></div>
+        <div class="form-row"><label>Dosage</label><input id="med-dosage" class="input" required /></div>
+        <div class="form-row"><label>Frequency</label><input id="med-frequency" class="input" required /></div>
+        <div class="form-row"><label>Started Date</label><input type="date" id="med-started" class="input" required /></div>
+        <div id="med-error" style="color:#b91c1c; display:none; margin-top:6px;"></div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+        <button class="btn-inline btn-cancel" onclick="closeMedModal()">Cancel</button>
+        <button class="btn-inline btn-save" id="med-save-btn" onclick="submitMedModal()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chronic Modal -->
+<div id="chronic-modal" class="hidden" aria-hidden="true">
+  <div class="modal-backdrop" onclick="closeChronicModal(event)">
+    <div class="modal-card" role="dialog" onclick="event.stopPropagation()">
+      <h3 id="chronic-modal-title">Edit Chronic Disease</h3>
+      <div id="chronic-modal-body">
+        <div class="form-row"><label>Disease</label><input id="chronic-disease" class="input" required /></div>
+        <div class="form-row"><label>Date Diagnosed</label><input id="chronic-date" type="date" class="input" required /></div>
+        <div class="form-row">
+          <label>Severity</label>
+          <select id="chronic-severity" class="input" required>
+            <option value="mild">Mild</option>
+            <option value="moderate">Moderate</option>
+            <option value="severe">Severe</option>
+            
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Status</label>
+          <select id="chronic-status" class="input" required>
+            <option value="active">Active</option>
+            <option value="controlled">Controlled</option>
+            <option value="resolved">Resolved</option>
+
+          </select>
+        </div>
+        <div id="chronic-error" style="color:#b91c1c; display:none; margin-top:6px;"></div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+        <button class="btn-inline btn-cancel" onclick="closeChronicModal()">Cancel</button>
+        <button class="btn-inline btn-save" id="chronic-save-btn" onclick="submitChronicModal()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Allergy Modal -->
+<div id="allergy-modal" class="hidden" aria-hidden="true">
+  <div class="modal-backdrop" onclick="closeAllergyModal(event)">
+    <div class="modal-card" role="dialog" onclick="event.stopPropagation()">
+      <h3 id="allergy-modal-title">Edit Allergy</h3>
+      <div id="allergy-modal-body">
+        <div class="form-row"><label>Allergen</label><input id="allergy-allergen" class="input" required /></div>
+        <div class="form-row"><label>Type</label><select id="allergy-type" class="input" required>
+            <option value="drug">Drug</option>
+            <option value="food">Food</option>
+            <option value="environmental">Environmental</option>
+            <option value="other">Other</option>
+
+          </select></div>
+        <div class="form-row"><label>Severity</label><select id="allergy-severity" class="input" required>
+            <option value="mild">Mild</option>
+            <option value="moderate">Moderate</option>
+            <option value="severe">Severe</option>
+            
+          </select></div>
+        <div class="form-row"><label>Reaction</label><input id="allergy-reaction" class="input" required/></div>
+        <div id="allergy-error" style="color:#b91c1c; display:none; margin-top:6px;"></div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+        <button class="btn-inline btn-cancel" onclick="closeAllergyModal()">Cancel</button>
+        <button class="btn-inline btn-save" id="allergy-save-btn" onclick="submitAllergyModal()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<style>
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:6px; cursor:pointer; border:1px solid #e6e6e6; background:#fff; margin:0 4px; }
+.icon-btn:hover { box-shadow:0 4px 10px rgba(0,0,0,0.06); }
+.icon-btn.add { background:#eef8ff; border-color:#cfeeff; }
+.icon-btn.edit { background:#fff9ed; border-color:#ffe8a8; }
+.icon-btn.del { background:#fff0f0; border-color:#ffc6c6; }
+.action-group { display:flex; align-items:center; justify-content:center; }
+.hidden { display:none !important; }
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; }
+.modal-card { background:#fff; padding:16px; border-radius:8px; width:520px; max-width:95%; box-shadow:0 12px 30px rgba(0,0,0,0.18); }
+.form-row { margin-bottom:10px; }
+.form-row label { display:block; font-size:13px; color:#333; margin-bottom:6px; }
+.input { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #e5e7eb; }
+.btn-inline { padding:8px 12px; border-radius:6px; cursor:pointer; border:0; }
+.btn-cancel { background:#f3f4f6; }
+.btn-save { background:#0ea5a4; color:#fff; }
+</style>    
+
+
+
+  <script>
+  window.HANDLE_SHARING_URL = "{% url 'user:handle_sharing_request' %}";
+</script>
+ <script>
+  document.addEventListener("DOMContentLoaded", () => {
+  initPatientFilters();
+});
+
+function initPatientFilters() {
+  const btns = document.querySelectorAll(".patient-filter");
+  btns.forEach(b => {
+    b.addEventListener("click", () => {
+      btns.forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      applyPatientFilter(b.dataset.filter);
+    });
+  });
+
+  // default
+  applyPatientFilter("active");
+}
+
+function dsTrue(v) {
+  const s = String(v ?? "").toLowerCase().trim();
+  return s === "true" || s === "1" || s === "yes";
+}
+
+function applyPatientFilter(filter) {
+  const cards = document.querySelectorAll("#patients-grid .patient-card");
+  const now = Date.now();
+  const NEW_MS = 7 * 24 * 60 * 60 * 1000;
+
+  cards.forEach(card => {
+    const active = dsTrue(card.dataset.active);
+    const hidden = dsTrue(card.dataset.hidden);
+
+    const grantedStr = card.dataset.granted || "";
+    const grantedMs = grantedStr ? new Date(grantedStr).getTime() : NaN;
+    const isNew = Number.isFinite(grantedMs) && ((now - grantedMs) <= NEW_MS);
+
+    let show = true;
+
+    if (filter === "active") show = active && !hidden;
+    else if (filter === "hidden") show = hidden;
+    else if (filter === "new") show = active && !hidden && isNew;
+    else if (filter === "all") show = true;   // ✅ shows hidden too
+
+    card.style.display = show ? "" : "none";
+  });
+}
+
+ </script>
+ <script id="bootstrap-state" type="application/json">
+{
+  "pending": [
+    {% for request in pending_requests %}
+    {
+      "id": {{ request.id }},
+      "first_name": "{{ request.from_user.first_name|escapejs }}",
+      "last_name": "{{ request.from_user.last_name|escapejs }}",
+      "email": "{{ request.from_user.email|escapejs }}",
+      "data_scope": "{{ request.data_scope|escapejs }}",
+      "message": "{{ request.message|escapejs }}",
+      "created_at": "{{ request.created_at|date:'c' }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "patients": [
+    {% for item in pationt %}
+    {
+      "pk": {{ item.access.pk }},
+      "active": {{ item.access.active|yesno:"true,false" }},
+      "data_scope": "{{ item.access.data_scope|escapejs }}",
+      "granted_at": "{{ item.access.granted_at|date:'c' }}",
+      "user": {
+        "id": {{ item.access.user.id }},
+        "first_name": "{{ item.access.user.first_name|escapejs }}",
+        "last_name": "{{ item.access.user.last_name|escapejs }}",
+        "email": "{{ item.access.user.email|escapejs }}"
+      },
+      "permissions": [{% for p in item.permissions %}"{{ p|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+
+
+  <script src="{% static 'js/script.js'%}"></script>
+
+  <script src="{% static 'js/app.js'%}"></script>
+</body>
+</html>
+ 

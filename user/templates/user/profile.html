@@ -1,0 +1,612 @@
+{% load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - MediTrack</title>
+  <link rel="stylesheet" href="{% static 'user/css/main.css'%}">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+              <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo" class="logo_img">
+          </div>
+          <span class="sidebar-logo-text">MediTrack</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="dashboard">
+              <span class="sidebar-nav-icon" id="nav-dashboard"></span>
+              <span class="sidebar-nav-text">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="health-data">
+              <span class="sidebar-nav-icon" id="nav-health"></span>
+              <span class="sidebar-nav-text">Health Data</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="files-reports">
+              <span class="sidebar-nav-icon" id="nav-files"></span>
+              <span class="sidebar-nav-text">Files & Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="alerts">
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+              <span class="sidebar-nav-text">Reminders</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="share-permissions">
+              <span class="sidebar-nav-icon" id="nav-share"></span>
+              <span class="sidebar-nav-text">Share & Permissions</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="profile">
+              <span class="sidebar-nav-icon" id="nav-profile"></span>
+              <span class="sidebar-nav-text">Profile</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-toggle">
+        <button class="sidebar-toggle-btn">
+          <span id="toggle-icon"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- TopBar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-menu-btn">
+            <span id="menu-icon"></span>
+          </button>
+          <div class="topbar-app-name">MediTrack</div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="topbar-notifications" onclick="window.location.href='/alerts'" >
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+            <span class="notification-badge">{{remainders}}</span>
+          </button>
+
+          <div class="user-menu">
+            <button class="user-menu-btn">
+       {% if user.profile_picture %}
+  <img class="user-avatar" src="{{user.profile_picture.url}}" alt="{{ user.get_full_name }}">
+{% else %}
+  <img class="avatar-circle" src="{% url 'user:initial-avatar' user.pk %}?size=64" alt="{{ user.get_full_name }}">
+{% endif %}
+              <div class="user-info">
+                <div class="user-name">{{user.first_name}} {{user.last_name}}</div>
+                <div class="user-email">{{user.email}}</div>
+              </div>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" style="display: block;">
+                <a href="#" class="sidebar-nav-item" data-page="profile">
+                <div class="user-info">
+                  <div class="user-name">{{user.first_name}} {{user.last_name}}</div>
+                  <div class="user-email">{{user.email}}</div>
+                </div>
+                </a>
+              </div>
+              
+              <div class="dropdown-separator"></div>
+              <a href="{% url 'user:logout' %}" class="dropdown-item danger">Sign Out</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <div class="container">
+          <div class="space-y-6">
+            <!-- Header -->
+            <div>
+              <h1 class="text-2xl font-semibold text-slate-900">Profile & Settings</h1>
+              <p class="text-slate-600" style="margin-top: 0.25rem;">Manage your personal information and account preferences</p>
+            </div>
+ 
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Profile Overview -->
+              <div class="lg:col-span-1">
+<div class="card">
+  <div class="card-content text-center">
+    <div style="margin-bottom: 1rem;">
+      {% if user.profile_picture %}
+        <img id="user-avatar" class="user-avatar2 w-24 h-24 rounded-full mx-auto object-cover"
+             src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+      {% else %}
+        <img id="user-avatar" class="user-avatar2 w-24 h-24 rounded-full mx-auto object-cover"
+             src="{% url 'user:initial-avatar' user.pk %}?size=64" alt="{{ user.get_full_name }}">
+      {% endif %}
+    </div>
+
+    <h3 class="font-semibold text-slate-900">{{ user.first_name }} {{ user.last_name }}</h3>
+    <p class="text-sm text-slate-600">{{ user.email }}</p>
+    <p class="text-sm text-slate-500" style="margin-top: 0.25rem;">Member since {{ user.created_at }}</p>
+
+    <!-- Change Photo controls -->
+    <input id="profile-pic-input" type="file" name="profile_picture" accept="image/*" style="display:none;">
+    <button id="change-photo-btn" class="btn btn-secondary w-full" style="margin-top: 1rem;">
+      <span id="upload-icon"></span> Change Photo
+    </button>
+
+    <!-- small inline feedback -->
+    <div id="profile-upload-status" style="margin-top:0.75rem; display:none;">
+      <span id="profile-upload-message"></span>
+    </div>
+  </div>
+</div>
+
+
+                <!-- Quick Stats -->
+                <div class="card" style="margin-top: 1.5rem;">
+                  <div class="card-header">
+                    <h3 class="card-title">Account Activity</h3>
+                  </div>
+                  <div class="card-content space-y-4">
+                    <div class="text-center">
+                      <div class="text-2xl font-semibold text-blue-600">{{filecount}}</div>
+                      <div class="text-sm text-slate-600">Medical Records</div>
+                    </div>
+                    <div class="text-center">
+                      <div class="text-2xl font-semibold text-green-600">{{remainders}}</div>
+                      <div class="text-sm text-slate-600">Active Reminders</div>
+                    </div>
+                    <div class="text-center">
+                      <div class="text-2xl font-semibold text-purple-600">{{provider}}</div>
+                      <div class="text-sm text-slate-600">Shared Providers</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Settings Forms -->
+              <div class="lg:col-span-2 space-y-6">
+                <!-- Personal Information -->
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title flex items-center">
+                      <span id="user-icon" class="text-blue-600" style="margin-right: 0.5rem;"></span>
+                      Personal Information
+                    </h3>
+                  </div>
+                  <div class="card-content">
+                   <form method="post" action="{% url 'user:edit_profile' %}" id="personal-info-form" class="space-y-4 " enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="form-group">
+        <label class="form-label">First Name</label>
+        {{ form.first_name }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Last Name</label>
+        {{ form.last_name }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      {{ form.email }}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Phone</label>
+{{ form.phone_number }}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Date of Birth</label>
+      {{ form.date_of_birth }}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Gender</label>
+      {{ form.gender }}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Blood Type</label>
+      {{ form.blood_type }}
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-4">Save Changes</button>
+  </form>
+                  </div>
+                </div>
+
+                <!-- Address Information -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title flex items-center">
+      <span id="home-icon" class="text-green-600" style="margin-right: 0.5rem;"></span>
+      Address Information
+    </h3>
+  </div>
+  <div class="card-content">
+    <form id="address-form" action="{% url 'user:edit_profile_adress' %}" method="POST">
+      {% csrf_token %}
+      {{ form2.non_field_errors }}
+
+      <div class="form-group">
+        <label class="form-label">Street Address</label>
+        {{ form2.street_address }}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          {{ form2.city }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ZIP Code</label>
+          {{ form2.zip_code }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Country</label>
+        {{ form2.country }}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Address</button>
+    </form>
+  </div>
+</div>
+
+
+                <!-- Security Settings -->
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title flex items-center">
+                      <span id="lock-icon" class="text-red-600" style="margin-right: 0.5rem;"></span>
+                      Security Settings
+                    </h3>
+                  </div>
+                  <div class="card-content">
+                   <form id="security-form" class="space-y-4">
+  <div class="form-group">
+    <label class="form-label">Current Password</label>
+    <input type="password" id="current-password" class="form-input" placeholder="Enter current password">
+  </div>
+  <div class="form-group">
+    <label class="form-label">New Password</label>
+    <input type="password" id="new-password" class="form-input" placeholder="Enter new password">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Confirm New Password</label>
+    <input type="password" id="confirm-password" class="form-input" placeholder="Confirm new password">
+  </div>
+  <button type="submit" class="btn btn-primary">Update Password</button>
+</form>
+
+<p id="password-response" style="margin-top:10px;font-size:14px;"></p>
+
+
+                    <div style="border-top: 1px solid #f1f5f9; margin-top: 2rem; padding-top: 2rem;">
+                      <h4 class="font-medium text-slate-900" style="margin-bottom: 1rem;">Account Actions</h4>
+                      <div class="space-y-3">
+<button id="delete-account-btn" class="btn btn-secondary w-full text-red-600">
+    <span id="trash-icon"></span>
+    Delete Account
+</button>
+
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                            <!-- Privacy & Security Settings -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title flex items-center">
+                  <span id="shield-icon" class="text-green-600" style="margin-right: 0.5rem;"></span>
+                  Privacy & Security Settings
+                </h3>
+              </div>
+              <div class="card-content">
+                <div class="space-y-6">
+                  <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+                    <div>
+                      <h4 class="font-medium text-slate-900">Two-Factor Authentication</h4>
+                      <p class="text-sm text-slate-600">Add an extra layer of security to your account</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+                    <div>
+                      <h4 class="font-medium text-slate-900">Data Sharing Analytics</h4>
+                      <p class="text-sm text-slate-600">Share anonymized data for medical research</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+                    <div>
+                      <h4 class="font-medium text-slate-900">Email Notifications</h4>
+                      <p class="text-sm text-slate-600">Receive email alerts for important updates</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50">
+                    <div>
+                      <h4 class="font-medium text-slate-900">Emergency Access</h4>
+                      <p class="text-sm text-slate-600">Allow emergency contacts to access critical information</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="{% static 'user/js/icons.js'%}"></script>
+  <script src="{% static 'user/js/app.js'%}"></script>
+  <script>
+    // Initialize profile page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set up icons
+      setIcon(document.getElementById('logo-icon'), 'heart');
+      setIcon(document.getElementById('nav-dashboard'), 'dashboard');
+      setIcon(document.getElementById('nav-health'), 'heart');
+      setIcon(document.getElementById('nav-files'), 'fileText');
+      setIcon(document.getElementById('nav-alerts'), 'bell');
+      setIcon(document.getElementById('nav-share'), 'share2');
+      setIcon(document.getElementById('nav-profile'), 'user');
+      setIcon(document.getElementById('toggle-icon'), 'chevronLeft');
+      setIcon(document.getElementById('menu-icon'), 'menu');
+      setIcon(document.getElementById('bell-icon'), 'bell');
+      setIcon(document.getElementById('settings-icon'), 'settings');
+      setIcon(document.getElementById('upload-icon'), 'upload');
+      setIcon(document.getElementById('user-icon'), 'user');
+      setIcon(document.getElementById('home-icon'), 'heart');
+      setIcon(document.getElementById('lock-icon'), 'settings');
+      setIcon(document.getElementById('download-icon'), 'download');
+      setIcon(document.getElementById('trash-icon'), 'trash2');
+
+      // Form handlers
+document.getElementById('personal-info-form').addEventListener('submit', function(e) {
+    e.preventDefault(); // keep preventing default
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Show toast
+        if (window.MedRecordApp) {
+            window.MedRecordApp.showToast('Personal information saved successfully', 'info');
+        }
+    })
+    .catch(error => console.error(error));
+});
+
+
+      document.getElementById('address-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+            fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Show toast
+        if (window.MedRecordApp) {
+            window.MedRecordApp.showToast('Personal information saved successfully', 'info');
+        }
+    })
+    .catch(error => console.error(error));
+});
+
+      document.getElementById('security-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (window.MedRecordApp) {
+          window.MedRecordApp.showToast('Password updated successfully', 'info');
+        }
+      });
+    });
+  </script>
+  <script>
+// helper to get CSRF token from cookie
+function getCookie(name) {
+  const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+  return v ? decodeURIComponent(v.split('=')[1]) : null;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const btn = document.getElementById('change-photo-btn');
+  const fileInput = document.getElementById('profile-pic-input');
+  const avatar = document.getElementById('user-avatar');
+  const statusWrap = document.getElementById('profile-upload-status');
+  const statusMsg = document.getElementById('profile-upload-message');
+
+  btn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async function () {
+    const files = fileInput.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    // Optional quick client-side validation:
+    if (!file.type.startsWith('image/')) {
+      statusWrap.style.display = 'block';
+      statusMsg.textContent = 'Please choose an image file.';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit for example
+      statusWrap.style.display = 'block';
+      statusMsg.textContent = 'Image is too large (max 5MB).';
+      return;
+    }
+
+    // Show a local preview immediately (optimistic)
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      avatar.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Prepare and send the file
+    const formData = new FormData();
+    formData.append('profile_picture', file);
+
+    statusWrap.style.display = 'block';
+    statusMsg.textContent = 'Uploading...';
+
+    try {
+      const res = await fetch("{% url 'user:upload_profile_picture' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error('Upload failed: ' + (text || res.status));
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        // update avatar with new file URL and bust cache
+        avatar.src = data.url + '?t=' + Date.now();
+        statusMsg.textContent = 'Profile photo updated.';
+        setTimeout(() => { statusWrap.style.display = 'none'; }, 2000);
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (err) {
+      console.error(err);
+      statusWrap.style.display = 'block';
+      statusMsg.textContent = 'Upload failed: ' + (err.message || 'error');
+      // Optionally revert to previous avatar if you saved it earlier
+    } finally {
+      fileInput.value = ''; // reset input so same file can be reselected later
+    }
+  });
+});
+</script>
+<script>
+function getCookie(name) {
+    return document.cookie.split('; ').find(r => r.startsWith(name+'='))?.split('=')[1] || null;
+}
+
+document.getElementById("security-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    let current = document.getElementById("current-password").value;
+    let newPass = document.getElementById("new-password").value;
+    let confirm = document.getElementById("confirm-password").value;
+    let msg = document.getElementById("password-response");
+
+    // frontend basic validation
+    if (newPass !== confirm) {
+        msg.style.color = "red";
+        msg.textContent = "Passwords do not match.";
+        return;
+    }
+
+    let res = await fetch("{% url 'user:change_password' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ current, newPass })
+    });
+
+    let data = await res.json();
+    msg.style.color = data.success ? "green" : "red";
+    msg.textContent = data.message;
+});
+</script>
+<script>
+function getCookie(name) {
+    return document.cookie.split("; ").find(row => row.startsWith(name+"="))?.split("=")[1];
+}
+
+document.getElementById("delete-account-btn").addEventListener("click", async function () {
+    
+    // Confirm before deleting — REQUIRED!
+    if (!confirm("⚠ Are you sure you want to permanently delete your account? This action cannot be undone.")) {
+        return;
+    }
+
+    let res = await fetch("{% url 'user:delete_account' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") }
+    });
+
+    let data = await res.json();
+    if (data.success) {
+        // Redirect user out after account deletion
+        window.location.href = data.redirect;
+    } else {
+        document.getElementById("delete-response").textContent = data.message;
+        document.getElementById("delete-response").style.color = "red";
+    }
+});
+</script>
+
+</body>
+</html>

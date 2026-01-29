@@ -1,0 +1,1129 @@
+{% extends "user/base.html" %}
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reminders - MediTrack</title>
+  <link rel="stylesheet" href="{% static 'user/css/main.css' %}">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+              <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo" class="logo_img">
+          </div>
+          <span class="sidebar-logo-text">MediTrack</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="{% url 'user:dashboard' %}" class="sidebar-nav-item" data-page="dashboard">
+              <span class="sidebar-nav-icon" id="nav-dashboard"></span>
+              <span class="sidebar-nav-text">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'user:health-data' %}" class="sidebar-nav-item" data-page="health-data">
+              <span class="sidebar-nav-icon" id="nav-health"></span>
+              <span class="sidebar-nav-text">Health Data</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'user:files-reports' %}" class="sidebar-nav-item" data-page="files-reports">
+              <span class="sidebar-nav-icon" id="nav-files"></span>
+              <span class="sidebar-nav-text">Files & Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item active" data-page="alerts">
+              <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+              <span class="sidebar-nav-text">Reminders</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'user:share-permissions' %}" class="sidebar-nav-item" data-page="share-permissions">
+              <span class="sidebar-nav-icon" id="nav-share"></span>
+              <span class="sidebar-nav-text">Share & Permissions</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'user:profile' %}" class="sidebar-nav-item" data-page="profile">
+              <span class="sidebar-nav-icon" id="nav-profile"></span>
+              <span class="sidebar-nav-text">Profile</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-toggle">
+        <button class="sidebar-toggle-btn">
+          <span id="toggle-icon"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- TopBar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-menu-btn">
+            <span id="menu-icon"></span>
+          </button>
+          <div class="topbar-app-name">MediTrack</div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="topbar-notifications" onclick="window.location.href='/alerts'" >
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+          </button>
+
+         <div class="user-menu">
+            <button class="user-menu-btn">
+       {% if user.profile_picture %}
+  <img class="user-avatar" src="{{user.profile_picture.url}}" alt="{{ user.get_full_name }}">
+{% else %}
+  <img class="avatar-circle" src="{% url 'user:initial-avatar' user.pk %}?size=64" alt="{{ user.get_full_name }}">
+{% endif %}
+              <div class="user-info">
+                <div class="user-name">{{user.first_name}} {{user.last_name}}</div>
+                <div class="user-email">{{user.email}}</div>
+              </div>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" style="display: block;">
+                <a href="#" class="sidebar-nav-item" data-page="profile">
+                <div class="user-info">
+                  <div class="user-name">{{user.first_name}} {{user.last_name}}</div>
+                  <div class="user-email">{{user.email}}</div>
+                </div>
+                </a>
+              </div>
+              
+              <div class="dropdown-separator"></div>
+              <a href="{% url 'user:logout' %}" class="dropdown-item danger">Sign Out</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <div class="container">
+          <div class="space-y-6">
+            <!-- Header -->
+            <div>
+              <h1 class="text-2xl font-semibold text-slate-900">Reminders & Alerts</h1>
+              <p class="text-slate-600" style="margin-top: 0.25rem;">Manage your medication and appointment reminders</p>
+            </div>
+
+            <!-- Alerts Grid -->
+            <div class="alerts-grid">
+              <!-- Calendar Widget -->
+              <div class="calendar-widget">
+                <div class="card">
+                  <div class="card-header">
+                    <h3 class="card-title">Calendar</h3>
+                  </div>
+                  <div class="card-content">
+                    <div id="simple-calendar"></div>
+                    <div class="space-y-3" style="margin-top: 1.5rem;">
+                      <div class="flex items-center gap-2">
+                        <div style="width: 0.75rem; height: 0.75rem; background-color: #10b981; border-radius: 50%;"></div>
+                        <span class="text-sm text-slate-600">Medication reminders</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <div style="width: 0.75rem; height: 0.75rem; background-color: #3b82f6; border-radius: 50%;"></div>
+                        <span class="text-sm text-slate-600">Health monitoring</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <div style="width: 0.75rem; height: 0.75rem; background-color: #8b5cf6; border-radius: 50%;"></div>
+                        <span class="text-sm text-slate-600">Appointments</span>
+                      </div>
+                      <button class="btn btn-secondary w-full text-sm" onclick="AlertsManager.clearDateFilter()">
+                        <span id="clear-filter-icon"></span>
+                        Show All Reminders
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Alerts List Container -->
+              <div class="alerts-container">
+                <div class="card">
+                  <div class="card-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h3 class="card-title">Active Reminders</h3>
+                    <button class="btn btn-primary w-full sm:w-auto" data-modal-trigger="new-alert-modal">
+                      <span id="plus-icon"></span>
+                      New Reminder
+                    </button>
+                  </div>
+                  <div class="card-content">
+                    <div class="alerts-list-wrapper">
+                      <div id="alerts-list">
+                        <!-- Alert items will be populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" data-modal-trigger="new-alert-modal">
+      <span id="fab-plus-icon"></span>
+    </button>
+  </div>
+
+  <!-- New Alert Modal -->
+  <div class="modal-overlay" id="new-alert-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Create New Reminder</h3>
+      </div>
+      <form id="new-alert-form" class="space-y-4" method="post" >
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Reminder Title</label>
+            <input type="text" name="title" class="form-input" placeholder="e.g., Take Medication" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-select" required>
+              <option value="">Select type...</option>
+              <option value="medication">Medication</option>
+              <option value="monitoring">Health Monitoring</option>
+              <option value="appointment">Appointment</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time</label>
+            <input type="time" name="time" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Frequency</label>
+            <select name="frequency" class="form-select" id="frequency-select" required>
+              <option value="">Select frequency...</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="once">One-time</option>
+            </select>
+          </div>
+          <div class="form-group" id="date-field-group" style="display: none;">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-input">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Reminder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<!-- Edit Alert Modal -->
+<div class="modal-overlay" id="edit-alert-modal" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Reminder</h3>
+    </div>
+    <form id="edit-alert-form" class="space-y-4" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="id" id="edit-alert-id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Reminder Title</label>
+          <input type="text" name="title" id="edit-title" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select name="type" id="edit-type" class="form-select" required>
+            <option value="medication">Medication</option>
+            <option value="monitoring">Health Monitoring</option>
+            <option value="appointment">Appointment</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time</label>
+          <input type="time" name="time" id="edit-time" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select name="frequency" id="edit-frequency" class="form-select" required>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="once">One-time</option>
+          </select>
+        </div>
+        <div class="form-group" id="edit-date-field-group" style="display: none;">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" id="edit-date" class="form-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+  <!-- <script src="{% static 'user/js/icons.js'%}"></script>
+  <script src="{% static 'user/js/alerts.js'%}"></script>
+   -->
+<script src="{% static 'user/js/app.js'%}"></script>
+
+  <script>
+window.ALERTS_URLS = {
+  create: "{% url 'user:alerts_create' %}",
+  toggle_template: "{% url 'user:alerts_toggle' 0 %}",
+  delete_template: "{% url 'user:alerts_delete' 0 %}",
+  edit_template: "{% url 'user:alerts_edit' 0 %}",
+    edit:   "{% url 'user:alerts_edit' 0 %}"
+
+};
+</script>
+
+  <script>
+  window.initialReminders = {{ reminders_json|safe }};
+</script>
+  <script>
+// Icons mapping for Lucide icons
+const iconsMap = {
+  // Basic shapes and arrows
+  chevronLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+  chevronRight: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+  menu: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>',
+  bell: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  settings: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+  plus: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  filter: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
+  
+  // App icons
+  dashboard: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>',
+  heart: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+  fileText: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+  share2: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>',
+  user: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  
+  // Alert icons
+  pill: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>',
+  calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
+  clock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  edit: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  trash2: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>'
+};
+
+// Function to set icons
+function setIcon(element, iconName) {
+  if (iconsMap[iconName] && element) {
+    element.innerHTML = iconsMap[iconName];
+  }
+}
+
+// Alerts page functionality
+window.AlertsManager = {
+  alerts: [],
+  currentDate: new Date(),
+  selectedDate: null,
+
+  init() {
+    this.alerts = window.initialReminders || [];
+    this.renderAlerts();
+    this.renderCalendar();
+    this.setupEventListeners();
+    
+    // Set up icons
+    setIcon(document.getElementById('nav-dashboard'), 'dashboard');
+    setIcon(document.getElementById('nav-health'), 'heart');
+    setIcon(document.getElementById('nav-files'), 'fileText');
+    setIcon(document.getElementById('nav-share'), 'share2');
+    setIcon(document.getElementById('nav-profile'), 'user');
+    setIcon(document.getElementById('toggle-icon'), 'chevronLeft');
+    setIcon(document.getElementById('menu-icon'), 'menu');
+    setIcon(document.getElementById('settings-icon'), 'settings');
+    setIcon(document.getElementById('plus-icon'), 'plus');
+    setIcon(document.getElementById('fab-plus-icon'), 'plus');
+    setIcon(document.getElementById('clear-filter-icon'), 'filter');
+  },
+
+  renderAlerts() {
+    const container = document.getElementById('alerts-list');
+    if (!container) return;
+
+    // Filter alerts based on selected date if any
+    let alertsToShow = this.alerts;
+if (this.selectedDate) {
+  const selectedDate = this.selectedDate;
+  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const selectedDayOfWeek = selectedDate.getDay();
+  const selectedDayOfMonth = selectedDate.getDate();
+
+  alertsToShow = this.alerts.filter(alert => {
+    if (!alert.enabled) return false;
+
+    // 1. DAILY → always show
+    if (alert.frequency === "daily") {
+      return true;
+    }
+
+    // Convert next_due to a Date if possible
+    const nextDue = alert.next_due ? new Date(alert.next_due) : null;
+
+    // 2. WEEKLY → same day of week
+    if (alert.frequency === "weekly" && nextDue) {
+      return nextDue.getDay() === selectedDayOfWeek;
+    }
+
+    // 3. MONTHLY → same date (1–31)
+    if (alert.frequency === "monthly" && nextDue) {
+      return nextDue.getDate() === selectedDayOfMonth;
+    }
+
+    // 4. ONE-TIME → exact date match
+    if (alert.frequency === "once" && nextDue) {
+      return nextDue.toISOString().split("T")[0] === selectedDateStr;
+    }
+
+    return false;
+  });
+}
+
+
+
+    container.innerHTML = alertsToShow.map(alert => this.createAlertHTML(alert)).join('');
+
+    // Set up icons for each alert
+    alertsToShow.forEach(alert => {
+
+
+      const iconEl = document.getElementById(`alert-icon-${alert.id}`);
+      const clockEl = document.getElementById(`clock-icon-${alert.id}`);
+      const trashEl = document.getElementById(`trash-icon-${alert.id}`);
+      const editEl  = document.getElementById(`edit-icon-${alert.id}`);
+
+      if (iconEl) setIcon(iconEl, alert.icon);
+      if (clockEl) setIcon(clockEl, 'clock');
+      if (trashEl) setIcon(trashEl, 'trash2');
+      if (editEl)  setIcon(editEl, 'edit');   // ← Missing Before
+
+    });
+  },
+
+  createAlertHTML(alert) {
+    const colorClasses = {
+      medication: { bg: 'bg-green-100', text: 'text-green-600', badge: 'background-color: #dcfce7; color: #16a34a;' },
+      monitoring: { bg: 'bg-blue-100', text: 'text-blue-600', badge: 'background-color: #dbeafe; color: #2563eb;' },
+      appointment: { bg: 'bg-purple-100', text: 'text-purple-600', badge: 'background-color: #f3e8ff; color: #7c3aed;' }
+    };
+
+    const colors = colorClasses[alert.type] || colorClasses.medication;
+    const opacity = alert.enabled ? '' : 'opacity: 0.6;';
+    
+    // Format time for display
+    const timeDisplay = alert.time ? this.formatTimeForDisplay(alert.time) : 'No time set';
+    const nextDueDisplay = alert.next_due ? new Date(alert.next_due).toLocaleDateString() : 'Not scheduled';
+
+    return `
+      <div class="alert-item">
+        <div class="flex items-start sm:items-center justify-between p-4 rounded-xl border bg-white" style="${opacity}">
+          <div class="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+            <div class="w-10 h-10 ${colors.bg} rounded-lg padingforicons flex items-center justify-center flex-shrink-0">
+              <span id="alert-icon-${alert.id}" class="${colors.text}" style="margin-top: 8px; padding:0 8px;"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                <h4 class="font-medium text-slate-900 text-sm truncate">${alert.title}</h4>
+                <span class="badge text-xs self-start" style="${colors.badge}">${alert.type_display || alert.type}</span>
+              </div>
+              <div class="flex flex-col sm:flex-row spac_eve gap-2 text-xs text-slate-500">
+                <div class="flex items-center gap-1">
+                  <span id="clock-icon-${alert.id}" class="icon-sm flex-shrink-0"></span>
+                  <span style="margin-left: 10px; margin-top: 4px;">${timeDisplay}</span>
+                </div>
+                <span class="hidden sm:inline">•</span>
+                <span>${alert.frequency_display || alert.frequency}</span>
+                <span class="hidden sm:inline">•</span>
+                <span>Next: ${nextDueDisplay}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3 ml-3">
+            <label class="switch">
+              <input type="checkbox" ${alert.enabled ? 'checked' : ''} onchange="AlertsManager.toggleAlert(${alert.id})">
+              <span class="switch-slider"></span>
+            </label>
+            <div class="flex items-center gap-1">
+               <button class="btn btn-ghost btn-sm text-slate-600"
+            style="width: 2rem; height: 2rem; padding:0;"
+            onclick="AlertsManager.openEdit(${alert.id})">
+        <span id="edit-icon-${alert.id}" class="icon-sm"></span>
+    </button>
+              <button class="btn btn-ghost btn-sm text-red-600" style="width: 2rem; height: 2rem; padding: 0;" onclick="AlertsManager.deleteAlert(${alert.id})">
+                <span id="trash-icon-${alert.id}" class="icon-sm"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  formatTimeForDisplay(timeStr) {
+    // Convert "HH:MM:SS" or "HH:MM" to 12-hour format
+    if (!timeStr) return 'No time';
+    
+    const timeParts = timeStr.split(':');
+    let hours = parseInt(timeParts[0]);
+    const minutes = timeParts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    
+    return `${hours}:${minutes} ${ampm}`;
+  },
+
+  renderCalendar() {
+    const container = document.getElementById('simple-calendar');
+    if (!container) return;
+
+    const year = this.currentDate.getFullYear();
+    const month = this.currentDate.getMonth();
+    const today = new Date();
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+
+    // Get alerts for this month
+    const monthAlerts = this.getAlertsForMonth(year, month);
+
+    let calendarHTML = `
+      <div style="background-color: #f8fafc; border-radius: 0.75rem; padding: 1rem;">
+        <div class="flex items-center justify-between mb-4">
+          <button onclick="AlertsManager.previousMonth()" class="btn btn-ghost btn-sm" style="width: 2rem; height: 2rem; padding: 0;">
+            <span id="prev-month-icon" class="icon-sm"></span>
+          </button>
+          <h4 class="font-semibold text-slate-900">${monthNames[month]} ${year}</h4>
+          <button onclick="AlertsManager.nextMonth()" class="btn btn-ghost btn-sm" style="width: 2rem; height: 2rem; padding: 0;">
+            <span id="next-month-icon" class="icon-sm"></span>
+          </button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; font-size: 0.75rem;">
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">S</div>
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">M</div>
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">T</div>
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">W</div>
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">T</div>
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">F</div>
+          <div style="text-align: center; font-weight: 600; color: #64748b; padding: 0.5rem;">S</div>
+    `;
+
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      calendarHTML += '<div style="padding: 0.5rem;"></div>';
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+      const isSelected = this.selectedDate &&
+        this.selectedDate.getFullYear() === year &&
+        this.selectedDate.getMonth() === month &&
+        this.selectedDate.getDate() === day;
+
+      const dayAlerts = monthAlerts[currentDateStr] || [];
+
+      let dayStyle = 'position: relative; text-align: center; padding: 0.5rem; cursor: pointer; border-radius: 0.25rem; transition: background-color 0.2s;';
+
+      if (isToday) {
+        dayStyle += ' background-color: #dbeafe; color: #1d4ed8; font-weight: 600;';
+      } else if (isSelected) {
+        dayStyle += ' background-color: #e0e7ff; color: #3730a3; font-weight: 600;';
+      }
+
+      dayStyle += ':hover { background-color: #f1f5f9; }';
+
+      let alertIndicators = '';
+      if (dayAlerts.length > 0) {
+        const alertColors = {
+          medication: '#10b981',
+          monitoring: '#3b82f6',
+          appointment: '#8b5cf6'
+        };
+
+        const uniqueColors = [...new Set(dayAlerts.map(alert => alert.type))];
+        alertIndicators = `
+          <div style="position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px;">
+            ${uniqueColors.map(type => `
+              <div style="width: 4px; height: 4px; background-color: ${alertColors[type]}; border-radius: 50%;"></div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      calendarHTML += `
+        <div style="${dayStyle}" onclick="AlertsManager.selectDate(${year}, ${month}, ${day})" onmouseover="this.style.backgroundColor='#f1f5f9'" onmouseout="this.style.backgroundColor='${isToday ? '#dbeafe' : isSelected ? '#e0e7ff' : 'transparent'}'">
+          ${day}
+          ${alertIndicators}
+        </div>
+      `;
+    }
+
+    calendarHTML += '</div></div>';
+    container.innerHTML = calendarHTML;
+
+    // Set up navigation icons
+    setTimeout(() => {
+      const prevIcon = document.getElementById('prev-month-icon');
+      const nextIcon = document.getElementById('next-month-icon');
+      if (prevIcon) setIcon(prevIcon, 'chevronLeft');
+      if (nextIcon) setIcon(nextIcon, 'chevronRight');
+    }, 0);
+  },
+
+  getAlertsForMonth(year, month) {
+    const monthAlerts = {};
+
+    this.alerts.forEach(alert => {
+      if (!alert.enabled) return;
+
+      const alertDate = new Date(alert.next_due);
+
+      if (alert.frequency === 'daily') {
+        // Add daily alerts to every day of the month
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          if (!monthAlerts[dateStr]) monthAlerts[dateStr] = [];
+          monthAlerts[dateStr].push(alert);
+        }
+      } else if (alert.frequency === 'weekly') {
+        // Add weekly alerts to the same day of week
+        const alertDayOfWeek = alertDate.getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayOfWeek = (firstDay + day - 1) % 7;
+          if (dayOfWeek === alertDayOfWeek) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if (!monthAlerts[dateStr]) monthAlerts[dateStr] = [];
+            monthAlerts[dateStr].push(alert);
+          }
+        }
+      } else {
+        // One-time or monthly alerts
+        if (alertDate.getFullYear() === year && alertDate.getMonth() === month) {
+          const dateStr = alert.next_due.split('T')[0];
+          if (!monthAlerts[dateStr]) monthAlerts[dateStr] = [];
+          monthAlerts[dateStr].push(alert);
+        }
+      }
+    });
+
+    return monthAlerts;
+  },
+
+  previousMonth() {
+    this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+    this.renderCalendar();
+  },
+
+  nextMonth() {
+    this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+    this.renderCalendar();
+  },
+
+  selectDate(year, month, day) {
+    this.selectedDate = new Date(year, month, day);
+    this.renderCalendar();
+    this.renderAlerts();
+
+    // Show selected date info
+    const dateStr = this.selectedDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    this.showToast(`Showing reminders for ${dateStr}`, 'info');
+  },
+
+  clearDateFilter() {
+    this.selectedDate = null;
+    this.renderCalendar();
+    this.renderAlerts();
+  },
+
+  setupEventListeners() {
+    // Modal functionality
+    const modalTriggers = document.querySelectorAll('[data-modal-trigger]');
+    const modalCloseButtons = document.querySelectorAll('[data-modal-close]');
+    
+    modalTriggers.forEach(trigger => {
+      trigger.addEventListener('click', () => {
+        const modalId = trigger.getAttribute('data-modal-trigger');
+        const modal = document.getElementById(modalId);
+        if (modal) {
+          modal.classList.add('active');
+        }
+      });
+    });
+    
+    modalCloseButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const modal = button.closest('.modal-overlay');
+        if (modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+    
+    // Close modal when clicking outside
+    const modals = document.querySelectorAll('.modal-overlay');
+    modals.forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+
+    // Show/hide date field based on frequency
+    const frequencySelect = document.getElementById('frequency-select');
+    const dateFieldGroup = document.getElementById('date-field-group');
+    
+    if (frequencySelect && dateFieldGroup) {
+      frequencySelect.addEventListener('change', function() {
+        if (this.value === 'daily') {
+          dateFieldGroup.style.display = 'none';
+        } else {
+          dateFieldGroup.style.display = 'block';
+        }
+      });
+    }
+
+    // Form submission
+    const form = document.getElementById('new-alert-form');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.createNewAlert(new FormData(form));
+      });
+    }
+  },
+
+async toggleAlert(id) {
+  try {
+    // Prefer dynamic URL if provided by Django, otherwise fallback to correct route
+    const url = window.ALERTS_URLS && window.ALERTS_URLS.toggle
+      ? window.ALERTS_URLS.toggle.replace("0", id)
+      : `/alerts/${id}/toggle/`;  // Use this because /user/alerts/404 doesn't exist
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": this.getCSRFToken(),
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    const text = await res.text();  // ← IMPORTANT: we read text first
+
+    let data;
+    try {
+      data = JSON.parse(text); // convert to JSON safely
+    } catch (e) {
+      console.error("TOGGLE returned NON-JSON (HTML) instead:", text);
+      alert("Toggle failed — server returned HTML instead of JSON.");
+      return;
+    }
+
+    if (data.success) {
+      const alert = this.alerts.find(a => a.id === id);
+
+      if (alert) {
+        alert.enabled = data.enabled;
+        this.renderAlerts();
+        this.renderCalendar();
+        this.showToast(`Reminder ${alert.enabled ? "enabled" : "disabled"}`, "info");
+      }
+    } else {
+      this.showToast(data.error || "Toggle failed", "error");
+    }
+
+  } catch (error) {
+    console.error("Toggle request failed:", error);
+    this.showToast("Error toggling reminder", "error");
+  }
+},
+  
+async deleteAlert(id) {
+  if (!confirm('Are you sure you want to delete this reminder?')) return;
+
+  try {
+    // Prefer a template-provided URL, otherwise try sensible fallbacks
+    const candidateUrl = (window.ALERTS_URLS && window.ALERTS_URLS.delete)
+      ? window.ALERTS_URLS.delete.replace("0", id)
+      : `/alerts/${id}/delete/`; // <-- use this because Django shows `alerts/` in URLconf
+
+    const res = await fetch(candidateUrl, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': this.getCSRFToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) {
+      console.error('DELETE returned NON-JSON HTML instead:', text);
+      alert('Server returned HTML (404/login). Check Network tab and server URL.');
+      return;
+    }
+
+    if (data.success) {
+      this.alerts = this.alerts.filter(a => a.id !== id);
+      this.renderAlerts();
+      this.renderCalendar && this.renderCalendar();
+      this.showToast('Reminder deleted', 'info');
+    } else {
+      this.showToast('Delete failed: ' + (data.error || 'unknown'), 'error');
+    }
+
+  } catch (error) {
+    console.error('Error deleting reminder:', error);
+    this.showToast('Error deleting reminder', 'error');
+  }
+},
+ 
+async createNewAlert(formData) {
+  if (this.isSubmitting) {
+    console.warn('createNewAlert already in progress');
+    return;
+  }
+  this.isSubmitting = true;
+  try {
+    const url = window.ALERTS_URLS && window.ALERTS_URLS.create ? window.ALERTS_URLS.create : '/user/alerts/create/';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) {
+      console.error('Server returned non-JSON response (status ' + res.status + '):', text);
+      alert('Server error: returned HTML instead of JSON. Check server logs or open the Network tab to see the response.');
+      return;
+    }
+
+    if (res.ok && data.success) {
+      const newReminder = window.AlertsManager.mapServerReminder ? window.AlertsManager.mapServerReminder(data.reminder) : data.reminder;
+      // Avoid duplicates: check by id (if present) or by title+time+date
+      const exists = this.alerts.some(a => (newReminder.id && a.id && String(a.id) === String(newReminder.id)) ||
+                                        (a.title === newReminder.title && a.time === newReminder.time && a.next_due === newReminder.next_due));
+      if (!exists) {
+        this.alerts.push(newReminder);
+      } else {
+        console.info('Duplicate reminder detected — skipping push to local array.');
+      }
+
+      this.renderAlerts();
+      this.renderCalendar && this.renderCalendar();
+      const form = document.getElementById('new-alert-form');
+      if (form) form.reset();
+      const dateGroup = document.getElementById('date-field-group');
+      if (dateGroup) dateGroup.style.display = 'none';
+      const modal = document.getElementById('new-alert-modal'); if (modal) modal.classList.remove('active');
+      this.showToast && this.showToast('Reminder created', 'success');
+    } else {
+      console.error('Create returned error:', data);
+      this.showToast && this.showToast(data.error || 'Failed to create', 'error');
+    }
+  } catch (err) {
+    console.error('Network/create error:', err);
+    this.showToast && this.showToast('Network error', 'error');
+  } finally {
+    this.isSubmitting = false;
+  }
+},
+
+// --- Add these helpers and edit functions to AlertsManager ---
+
+  // flexible endpoint resolver: checks several window.ALERTS_URLS variants then falls back
+  getEndpoint(name, id=null) {
+    // name: 'create'|'toggle'|'delete'|'edit'
+    if (window.ALERTS_URLS) {
+      // possible keys produced by your template: 'toggle', 'toggle_template', 'toggle_template', 'toggle_template' etc.
+      const candidates = [
+        window.ALERTS_URLS[name],
+        window.ALERTS_URLS[`${name}_template`],
+        window.ALERTS_URLS[`${name}Template`],
+        window.ALERTS_URLS[`${name}_url`],
+      ];
+      for (const c of candidates) {
+        if (c) {
+          return id === null ? c : c.replace("0", id);
+        }
+      }
+    }
+    // fallback defaults (match your project's URLconf as shown earlier)
+    switch (name) {
+      case 'create': return '/alerts/create/';
+      case 'toggle': return `/alerts/${id}/toggle/`;
+      case 'delete': return `/alerts/${id}/delete/`;
+      case 'edit':   return `/alerts/${id}/edit/`;
+      default: return '/alerts/';
+    }
+  },
+
+  // open and populate the edit modal
+  openEdit(id) {
+    const alert = this.alerts.find(a => a.id === id);
+    if (!alert) {
+      console.error('Edit: alert not found', id);
+      this.showToast('Reminder not found', 'error');
+      return;
+    }
+
+    // populate form fields
+    const modal = document.getElementById('edit-alert-modal');
+    if (!modal) return;
+
+    const form = document.getElementById('edit-alert-form');
+    if (!form) return;
+
+    form.querySelector('[name="id"]').value = alert.id || id;
+    const titleEl = document.getElementById('edit-title');
+    const typeEl  = document.getElementById('edit-type');
+    const timeEl  = document.getElementById('edit-time');
+    const freqEl  = document.getElementById('edit-frequency');
+    const dateEl  = document.getElementById('edit-date');
+
+    if (titleEl) titleEl.value = alert.title || '';
+    if (typeEl)  typeEl.value = alert.type || '';
+    if (timeEl)  timeEl.value = alert.time ? alert.time.slice(0,5) : '';
+    if (freqEl)  freqEl.value = alert.frequency || '';
+    if (dateEl)  dateEl.value = alert.next_due ? alert.next_due.split('T')[0] : '';
+
+    // Show/hide date field according to frequency
+    const editDateGroup = document.getElementById('edit-date-field-group');
+    if (editDateGroup) {
+      editDateGroup.style.display = (freqEl && freqEl.value === 'daily') ? 'none' : 'block';
+    }
+
+    // open modal
+    modal.classList.add('active');
+  },
+
+  // handle edit form submit (will be wired below in setupEventListeners)
+  async submitEditForm(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const form = document.getElementById('edit-alert-form');
+    if (!form) return;
+
+    const id = form.querySelector('[name="id"]').value;
+    const url = this.getEndpoint('edit', id);
+
+    const fd = new FormData(form);
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': this.getCSRFToken(),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
+      });
+
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        console.error('EDIT returned NON-JSON HTML instead:', text);
+        this.showToast('Server error while saving. Check console/network.', 'error');
+        return;
+      }
+
+      if (!data.success) {
+        this.showToast(data.error || 'Save failed', 'error');
+        return;
+      }
+
+      // server returned updated reminder object? Try to update local array.
+      const serverReminder = data.reminder || data.alert || null;
+
+      if (serverReminder) {
+        const idx = this.alerts.findIndex(a => String(a.id) === String(serverReminder.id));
+        if (idx > -1) {
+          // replace or shallow merge
+          this.alerts[idx] = Object.assign({}, this.alerts[idx], serverReminder);
+        } else {
+          // if not present, add it
+          this.alerts.push(serverReminder);
+        }
+      } else {
+        // if server didn't return object, update based on form fields
+        const idx = this.alerts.findIndex(a => String(a.id) === String(id));
+        if (idx > -1) {
+          const title = form.querySelector('#edit-title').value;
+          const type  = form.querySelector('#edit-type').value;
+          const time  = form.querySelector('#edit-time').value;
+          const frequency = form.querySelector('#edit-frequency').value;
+          const date  = form.querySelector('#edit-date').value;
+          this.alerts[idx] = Object.assign({}, this.alerts[idx], {
+            title, type, time,
+            frequency, next_due: date ? (date + 'T00:00:00') : this.alerts[idx].next_due
+          });
+        }
+      }
+
+      // UI updates
+      this.renderAlerts();
+      this.renderCalendar && this.renderCalendar();
+      this.showToast('Reminder updated', 'success');
+
+      // close modal
+      const modal = document.getElementById('edit-alert-modal');
+      if (modal) modal.classList.remove('active');
+
+    } catch (err) {
+      console.error('Error saving edit:', err);
+      this.showToast('Error saving reminder', 'error');
+    }
+  },
+
+  // ... end of added functions
+  
+   
+  getCSRFToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return csrfToken ? csrfToken.value : '';
+  },
+
+  showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 6px;
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: opacity 0.3s;
+    `;
+    
+    // Set background color based on type
+    if (type === 'info') {
+      toast.style.backgroundColor = '#3b82f6';
+    } else if (type === 'error') {
+      toast.style.backgroundColor = '#ef4444';
+    } else if (type === 'success') {
+      toast.style.backgroundColor = '#10b981';
+    }
+    
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, 3000);
+  }
+};
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize alerts functionality
+  if (window.AlertsManager) {
+    window.AlertsManager.init();
+  }
+});
+  </script>
+<script>
+  // Wire forms to AlertsManager safely — ALWAYS prevent default browser submit
+  (function () {
+    // New alert form
+    const newForm = document.getElementById('new-alert-form');
+    if (newForm) {
+      newForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (window.AlertsManager && typeof window.AlertsManager.createNewAlert === 'function') {
+          window.AlertsManager.createNewAlert(new FormData(newForm));
+        } else {
+          console.error('createNewAlert handler not found');
+        }
+      });
+    }
+
+    // Edit alert form
+    const editForm = document.getElementById('edit-alert-form');
+    if (editForm) {
+      editForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (window.AlertsManager && typeof window.AlertsManager.submitEditForm === 'function') {
+          window.AlertsManager.submitEditForm(e);
+        } else {
+          console.error('submitEditForm handler not found');
+        }
+      });
+    }
+
+    // Edit-frequency show/hide (if not already wired inside AlertsManager)
+    const editFreq = document.getElementById('edit-frequency');
+    const editDateGroup = document.getElementById('edit-date-field-group');
+    if (editFreq && editDateGroup) {
+      editFreq.addEventListener('change', function () {
+        editDateGroup.style.display = (this.value === 'daily') ? 'none' : 'block';
+      });
+    }
+  })();
+</script>
+
+
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,354 @@
+
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Files & Reports - MediTrack</title>
+  <link rel="stylesheet" href="{% static 'user/css/main.css'%}">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+              <img src="{% static 'user/images/logo.png' %}" alt="MediTrack Logo" class="logo_img">
+          </div>
+          <span class="sidebar-logo-text">MediTrack</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="dashboard">
+              <span class="sidebar-nav-icon" id="nav-dashboard"></span>
+              <span class="sidebar-nav-text">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="health-data">
+              <span class="sidebar-nav-icon" id="nav-health"></span>
+              <span class="sidebar-nav-text">Health Data</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="files-reports">
+              <span class="sidebar-nav-icon" id="nav-files"></span>
+              <span class="sidebar-nav-text">Files & Reports</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="alerts">
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+              <span class="sidebar-nav-text">Reminders</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="share-permissions">
+              <span class="sidebar-nav-icon" id="nav-share"></span>
+              <span class="sidebar-nav-text">Share & Permissions</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-nav-item" data-page="profile">
+              <span class="sidebar-nav-icon" id="nav-profile"></span>
+              <span class="sidebar-nav-text">Profile</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-toggle">
+        <button class="sidebar-toggle-btn">
+          <span id="toggle-icon"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- TopBar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-menu-btn">
+            <span id="menu-icon"></span>
+          </button>
+          <div class="topbar-app-name">MediTrack</div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="topbar-notifications" onclick="window.location.href='/alerts'" >
+            <img src="{% static 'user/images/alerts.png' %}"  class="sidebar-nav-icon">
+            <span class="notification-badge">{{remainders}}</span>
+          </button>
+
+          <div class="user-menu">
+            <button class="user-menu-btn">
+       {% if user.profile_picture %}
+  <img class="user-avatar" src="{{user.profile_picture.url}}" alt="{{ user.get_full_name }}">
+{% else %}
+  <img class="avatar-circle" src="{% url 'user:initial-avatar' user.pk %}?size=64" alt="{{ user.get_full_name }}">
+{% endif %}
+              <div class="user-info">
+                <div class="user-name">{{user.first_name}} {{user.last_name}}</div>
+                <div class="user-email">{{user.email}}</div>
+              </div>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" style="display: block;">
+                <a href="#" class="sidebar-nav-item" data-page="profile">
+                <div class="user-info">
+                  <div class="user-name">{{user.first_name}} {{user.last_name}}</div>
+                  <div class="user-email">{{user.email}}</div>
+                </div>
+                </a>
+              </div>
+              
+              <div class="dropdown-separator"></div>
+              <a href="{% url 'user:logout' %}" class="dropdown-item danger">Sign Out</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <div class="container">
+          <div class="space-y-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 class="text-2xl font-semibold text-slate-900">Files & Reports</h1>
+                <p class="text-slate-600" style="margin-top: 0.25rem;">Upload, organize, and manage your medical documents</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <button class="btn btn-secondary" id="filter-btn">
+                  <span id="filter-icon"></span>
+                     Filter
+                </button>
+
+                <button class="btn btn-primary" data-modal-trigger="upload-modal">
+                  <span id="upload-icon"></span>
+                  Upload
+                </button>
+
+                <button
+                  class="btn font-semibold aura-btn"
+                  onclick="window.location.href='/MedExtractor/'"
+                >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+     xmlns="http://www.w3.org/2000/svg"
+     style="color:white">
+  <path d="M12 2L13.8 7.2L19 9L13.8 10.8L12 16L10.2 10.8L5 9L10.2 7.2L12 2Z"
+        fill="currentColor"/>
+  <path d="M19 14L19.9 16.1L22 17L19.9 17.9L19 20L18.1 17.9L16 17L18.1 16.1L19 14Z"
+        fill="currentColor"/>
+</svg>
+
+                Use MedExtractor
+                </button>
+
+              </div>
+            </div>
+
+            <!-- Filter Popup (hidden by default) -->
+<div id="filter-popup" style="display:none; position:absolute; background:white; border:1px solid #ccc; border-radius:0.5rem; padding:1rem; box-shadow:0 2px 10px rgba(0,0,0,0.2); z-index:100;">
+  <form method="get" id="filter-form">
+    <div class="mb-2">
+      <label>Category:</label>
+      <select name="category">
+        <option value="">All Categories</option>
+        <option value="Imaging" {% if request.GET.category == 'Imaging' %}selected{% endif %}>Imaging</option>
+        <option value="Document" {% if request.GET.category == 'Document' %}selected{% endif %}>Document</option>
+        <option value="Other" {% if request.GET.category == 'Other' %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+
+    <div class="mb-2">
+      <label>File Type:</label>
+      <select name="file_type">
+        <option value="">All Types</option>
+        <option value="pdf" {% if request.GET.file_type == 'pdf' %}selected{% endif %}>PDF</option>
+        <option value="image" {% if request.GET.file_type == 'image' %}selected{% endif %}>Image</option>
+        <option value="dicom" {% if request.GET.file_type == 'dicom' %}selected{% endif %}>DICOM</option>
+        <option value="other" {% if request.GET.file_type == 'other' %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </form>
+</div>
+
+            <!-- Files Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="files-grid">
+  {% if files %}
+    {% for file in files %}
+      
+      <div class="file-card" style="width:150px; border:1px solid #ccc; border-radius:0.5rem; padding:0.5rem; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+  {% if file.thumbnail %}
+    <img src="{{ file.thumbnail.url }}" alt="{{ file.file_name }}" style="width:100%; height:100px; object-fit:cover; border-radius:0.25rem;">
+  {% else %}
+    <img src="{% static 'user/images/file-icon.png' %}" alt="{{ file.file_name }}" style="width:60px; height:60px; margin-top:0.5rem;">
+  {% endif %}
+  <p style="font-size:0.8rem; margin:0.5rem 0 0 0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">{{ file.file_name }}</p>
+  <p style="font-size:0.7rem; color:#555; margin:0;">{{ file.size_display }}</p>
+</div>
+
+
+    {% endfor %}
+  {% else %}
+    <p class="col-span-full text-center text-gray-500">No files found for selected filter.</p>
+  {% endif %}
+</div>
+
+
+            <!-- Upload Status Area (hidden by default) -->
+            <div id="upload-status" class="hidden">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Upload Progress</h3>
+                </div>
+                <div class="card-content">
+                  <div id="upload-progress-list" class="space-y-3">
+                    <!-- Upload progress items will be inserted here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="modal-overlay" id="upload-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Medical File</h3>
+        <button class="modal-close-btn" data-modal-close>
+          <span id="modal-close-icon"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="border: 2px dashed #cbd5e1; border-radius: 0.75rem; padding: 2rem; text-align: center; transition: border-color 0.2s; cursor: pointer;" id="upload-drop-zone">
+          <span id="upload-icon-large" style="width: 3rem; height: 3rem; color: #94a3b8; margin: 0 auto 1rem;"></span>
+          <p class="text-lg font-medium text-slate-900" style="margin-bottom: 0.5rem;">Drag and drop your files here</p>
+          <p class="text-sm text-slate-600" style="margin-bottom: 1rem;">or click to browse files</p>
+<button type="button" class="btn btn-primary" id="choose-files-btn">Choose Files</button>
+<input type="file" id="file-input" multiple hidden>
+          <p class="text-xs text-slate-500" style="margin-top: 1rem;">Supported formats: PDF, DICOM, JPG, PNG, DOC, DOCX (Max 50MB)</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" id="upload-files-btn">Upload Files</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Action Button -->
+  <button class="fab" data-modal-trigger="upload-modal" title="Upload Files">
+    <span id="fab-upload-icon"></span>
+  </button>
+
+
+
+
+
+  <script src="{% static 'user/js/icons.js'%}"></script>
+  <script src="{% static 'user/js/app.js'%}"></script>
+  <script src="{% static 'user/js/files-reports.js'%}"></script>
+
+  <script>
+    // Initialize files page specific icons and functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Sidebar icons
+      setIcon(document.getElementById('logo-icon'), 'heart');
+      setIcon(document.getElementById('nav-dashboard'), 'dashboard');
+      setIcon(document.getElementById('nav-health'), 'heart');
+      setIcon(document.getElementById('nav-files'), 'fileText');
+      setIcon(document.getElementById('nav-alerts'), 'bell');
+      setIcon(document.getElementById('nav-share'), 'share2');
+      setIcon(document.getElementById('nav-profile'), 'user');
+      setIcon(document.getElementById('toggle-icon'), 'chevronLeft');
+      
+      // TopBar icons
+      setIcon(document.getElementById('menu-icon'), 'menu');
+      setIcon(document.getElementById('bell-icon'), 'bell');
+      setIcon(document.getElementById('settings-icon'), 'settings');
+      
+      // Page specific icons
+      setIcon(document.getElementById('filter-icon'), 'filter');
+      setIcon(document.getElementById('upload-icon'), 'upload');
+      setIcon(document.getElementById('upload-icon-large'), 'upload', 'icon-lg');
+      setIcon(document.getElementById('modal-close-icon'), 'x');
+      setIcon(document.getElementById('fab-upload-icon'), 'upload');
+      
+      // File icons will be set up dynamically when files are rendered
+
+      // Initialize file upload functionality
+      if (window.FilesManager) {
+        window.FilesManager.init();
+      }
+    });
+
+    // File card hover effects will be set up dynamically when files are rendered
+
+
+    
+  </script>
+
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+  const filterBtn = document.getElementById('filter-btn');
+  const filterPopup = document.getElementById('filter-popup');
+
+  // Toggle popup on button click
+  filterBtn.addEventListener('click', function(event) {
+    const rect = filterBtn.getBoundingClientRect();
+    filterPopup.style.top = rect.bottom + window.scrollY + 'px';
+    filterPopup.style.left = rect.left + window.scrollX + 'px';
+    filterPopup.style.display = filterPopup.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Close popup when clicking outside
+  document.addEventListener('click', function(event) {
+    if (!filterPopup.contains(event.target) && event.target !== filterBtn) {
+      filterPopup.style.display = 'none';
+    }
+  });
+});
+</script>
+
+<script>
+document.getElementById('filter-form').addEventListener('submit', function(e) {
+  e.preventDefault(); // prevent form submission
+
+  const category = this.elements['category'].value;   // "Imaging", "Document", "Other", or ""
+  const fileType = this.elements['file_type'].value; // "pdf", "image", "document", "dicom", "other", or ""
+
+  if (window.FilesManager) {
+    FilesManager.setFilterCategory(category); // set category filter
+    FilesManager.setFilterType(fileType);     // set type filter
+    FilesManager.renderFiles();               // re-render filtered files
+  }
+
+  // hide popup
+  document.getElementById('filter-popup').style.display = 'none';
+});
+
+</script>
+
+</body>
+</html>
