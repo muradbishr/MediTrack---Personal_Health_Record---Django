@@ -1,9 +1,9 @@
-# MediTrack – Personal Medical Record System
+# MediTrack – Personal Health Record System
 
 ## Project Overview
 With the rapid advancement of technology, the healthcare sector faces major challenges in managing and preserving patient medical records. Many healthcare institutions still rely on traditional paper-based records, which leads to information loss, difficulty in access, delayed medical procedures, weak data sharing between patients and healthcare providers, and increased risk of medical errors.
 
-MediTrack is a digital Personal Medical Record (PMR) system designed to allow patients to securely manage, update, and share their health information. The system helps improve healthcare service quality and supports faster and more accurate medical decision-making.
+MediTrack is a digital Personal Health Record (PHR) system designed to allow patients to securely manage, update, and share their health information. The system helps improve healthcare service quality and supports faster and more accurate medical decision-making.
 
 ---
 
